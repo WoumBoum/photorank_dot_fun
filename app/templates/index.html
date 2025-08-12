@@ -44,6 +44,17 @@ document.addEventListener('DOMContentLoaded', async function () {
     try {
       await fetch(`/api/categories/select-by-name/${encodeURIComponent(categoryName)}`, { method: 'POST', credentials: 'include' });
     } catch (e) { console.error('Unable to select category by name', e); }
+    const nav = document.querySelector('header nav');
+    if (nav) {
+      const links = Array.from(nav.querySelectorAll('a'));
+      const relink = (text, path) => {
+        const a = links.find(x => x.textContent.trim() === text);
+        if (a) a.href = `/${encodeURIComponent(categoryName)}/${path}`;
+      };
+      relink('Vote', 'vote');
+      relink('Upload', 'upload');
+      relink('Leaderboard', 'leaderboard');
+    }
   }
 });
 </script>
