@@ -36,4 +36,15 @@
         </div>
     </div>
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', async function () {
+  const categoryName = "{{ category_name or '' }}";
+  if (categoryName) {
+    try {
+      await fetch(`/api/categories/select-by-name/${encodeURIComponent(categoryName)}`, { method: 'POST', credentials: 'include' });
+    } catch (e) { console.error('Unable to select category by name', e); }
+  }
+});
+</script>
 {% endblock %}

@@ -100,3 +100,14 @@ def get_category(category_id: int, db: Session = Depends(get_db)):
     if not category:
         raise HTTPException(status_code=404, detail="Category not found")
     return category
+
+
+@router.post("/select-by-name/{category_name}", status_code=status.HTTP_200_OK)
+def select_category_by_name(category_name: str, request: Request, db: Session = Depends(get_db)):
+    """Select a category by its name (case-insensitive) and store it in session"""
+    category = db.query(Category).filter(func.lower(Category.name) == func.lower(category_name)).first()
+    if not category:
+        raise HTTPException(status_code=404, detail="Category not found")
+    request.session["selected_category_id"] = category.id
+    request.session["selected_category_name"] = category.name
+    return {"message": f"Category '{category.name}' selected", "category_id": category.id}

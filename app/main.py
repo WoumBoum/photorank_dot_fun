@@ -78,6 +78,12 @@ def stats(request: Request):
     context.update(get_category_context(request))
     return templates.TemplateResponse("stats.html", context)
 
+@app.get("/vote/{category_name}", response_class=HTMLResponse)
+def vote_by_category(category_name: str, request: Request):
+    context = {"request": request, "category_name": category_name}
+    context.update(get_category_context(request))
+    return templates.TemplateResponse("index.html", context)
+
 @app.get("/login", response_class=HTMLResponse)
 def login(request: Request):
     context = {"request": request}
