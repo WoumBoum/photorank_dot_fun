@@ -60,6 +60,12 @@ def leaderboard(request: Request):
     context.update(get_category_context(request))
     return templates.TemplateResponse("leaderboard.html", context)
 
+@app.get("/leaderboard/{category_name}", response_class=HTMLResponse)
+def leaderboard_by_category(category_name: str, request: Request):
+    context = {"request": request, "category_name": category_name}
+    context.update(get_category_context(request))
+    return templates.TemplateResponse("leaderboard.html", context)
+
 @app.get("/upload", response_class=HTMLResponse)
 def upload(request: Request):
     context = {"request": request}
