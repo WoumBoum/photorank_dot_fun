@@ -270,18 +270,25 @@ class PhotoRankApp {
             noChoicesMessage = document.createElement('div');
             noChoicesMessage.id = 'no-choices-message';
             noChoicesMessage.className = 'no-choices-message';
+
+            // Derive current category from URL if on "/{category}/vote"
+            let categorySegment = null;
+            const match = window.location.pathname.match(/^\/([^/]+)\/vote$/);
+            if (match) categorySegment = match[1];
+            const uploadHref = categorySegment ? `/${encodeURIComponent(categorySegment)}/upload` : '/upload';
+
             noChoicesMessage.innerHTML = `
                 <h2>No more choices to make</h2>
                 <p>You've voted on all possible photo combinations in this category.</p>
                 <p>You can still vote in other categories or upload new photos.</p>
                 <div class="no-choices-actions">
                     <a href="/categories" class="btn">Choose Another Category</a>
-                    <a href="/upload" class="btn">Upload New Photo</a>
+                    <a href="${uploadHref}" class="btn">Upload New Photo</a>
                 </div>
             `;
             
             // Insert after the voting container
-            const votingContainer = document.querySelector('.voting-container');
+            const votingContainer = document.querySelector('.voting-container') || document.querySelector('.vote-section');
             if (votingContainer) {
                 votingContainer.appendChild(noChoicesMessage);
             } else {
