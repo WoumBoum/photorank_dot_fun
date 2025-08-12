@@ -94,3 +94,5 @@ MIT License - see LICENSE file for details.
 
 ---
 *Project inspired by [fastapi-course](https://github.com/Sanjeev-Thiyagarajan/fastapi-course)*
+
+I HATE MY LIFE
