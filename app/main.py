@@ -42,23 +42,19 @@ from .routers.websocket import websocket_endpoint
 app.add_api_websocket_route("/ws", websocket_endpoint)
 
 # Frontend routes
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from fastapi import Request
 
 templates = Jinja2Templates(directory="app/templates")
 
-@app.get("/", response_class=HTMLResponse)
-def index(request: Request):
-    context = {"request": request}
-    context.update(get_category_context(request))
-    return templates.TemplateResponse("index.html", context)
+@app.get("/")
+def index_redirect():
+    return RedirectResponse(url="/categories", status_code=307)
 
-@app.get("/leaderboard", response_class=HTMLResponse)
-def leaderboard(request: Request):
-    context = {"request": request}
-    context.update(get_category_context(request))
-    return templates.TemplateResponse("leaderboard.html", context)
+@app.get("/leaderboard")
+def leaderboard_redirect():
+    return RedirectResponse(url="/categories", status_code=307)
 
 @app.get("/{category_name}/leaderboard", response_class=HTMLResponse)
 def leaderboard_by_category(category_name: str, request: Request):
@@ -66,11 +62,9 @@ def leaderboard_by_category(category_name: str, request: Request):
     context.update(get_category_context(request))
     return templates.TemplateResponse("leaderboard.html", context)
 
-@app.get("/upload", response_class=HTMLResponse)
-def upload(request: Request):
-    context = {"request": request}
-    context.update(get_category_context(request))
-    return templates.TemplateResponse("upload.html", context)
+@app.get("/upload")
+def upload_redirect():
+    return RedirectResponse(url="/categories", status_code=307)
 
 @app.get("/{category_name}/upload", response_class=HTMLResponse)
 def upload_by_category(category_name: str, request: Request):
