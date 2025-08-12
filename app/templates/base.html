@@ -17,18 +17,6 @@
                 document.documentElement.setAttribute('data-theme', 'dark');
             }
         })();
-        // Persist OAuth token from URL and clean it
-        (function() {
-            try {
-                const url = new URL(window.location.href);
-                const token = url.searchParams.get('token');
-                if (token) {
-                    localStorage.setItem('token', token);
-                    url.searchParams.delete('token');
-                    window.history.replaceState({}, document.title, url.toString());
-                }
-            } catch (e) { /* no-op */ }
-        })();
     </script>
 </head>
 <body>

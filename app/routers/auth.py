@@ -105,7 +105,7 @@ async def github_callback(code: str, db: Session = Depends(get_db)):
             access_token = create_access_token(data={"user_id": user.id})
             
             return RedirectResponse(
-                url=f"{FRONTEND_URL}?token={access_token}",
+                url=f"{FRONTEND_URL}/auth/capture?token={access_token}&next=/categories",
                 status_code=302
             )
             
@@ -165,7 +165,7 @@ async def google_callback(code: str, db: Session = Depends(get_db)):
             access_token = create_access_token(data={"user_id": user.id})
             
             return RedirectResponse(
-                url=f"{FRONTEND_URL}?token={access_token}",
+                url=f"{FRONTEND_URL}/auth/capture?token={access_token}&next=/categories",
                 status_code=302
             )
             

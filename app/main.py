@@ -42,7 +42,7 @@ from .routers.websocket import websocket_endpoint
 app.add_api_websocket_route("/ws", websocket_endpoint)
 
 # Frontend routes
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.responses import HTMLResponse, RedirectResponse, PlainTextResponse
 from fastapi.templating import Jinja2Templates
 from fastapi import Request
 
@@ -101,3 +101,21 @@ def categories_new_page(request: Request):
     context = {"request": request}
     context.update(get_category_context(request))
     return templates.TemplateResponse("category_new.html", context)
+
+@app.get("/auth/capture", response_class=HTMLResponse)
+def auth_capture(request: Request):
+    # Minimal page: store token to localStorage, then redirect client-side
+    return HTMLResponse("""
+<!doctype html><html><head><meta charset=\"utf-8\"><title>Auth</title></head>
+<body>
+<script>
+(function(){
+  var params=new URLSearchParams(window.location.search);
+  var token=params.get('token');
+  var dest=params.get('next')||'/categories';
+  if(token){try{localStorage.setItem('token',token);}catch(e){}}
+  window.location.replace(dest);
+})();
+</script>
+</body></html>
+""")
