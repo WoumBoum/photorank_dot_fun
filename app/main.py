@@ -60,7 +60,7 @@ def leaderboard(request: Request):
     context.update(get_category_context(request))
     return templates.TemplateResponse("leaderboard.html", context)
 
-@app.get("/leaderboard/{category_name}", response_class=HTMLResponse)
+@app.get("/{category_name}/leaderboard", response_class=HTMLResponse)
 def leaderboard_by_category(category_name: str, request: Request):
     context = {"request": request, "category_name": category_name}
     context.update(get_category_context(request))
@@ -72,13 +72,19 @@ def upload(request: Request):
     context.update(get_category_context(request))
     return templates.TemplateResponse("upload.html", context)
 
+@app.get("/{category_name}/upload", response_class=HTMLResponse)
+def upload_by_category(category_name: str, request: Request):
+    context = {"request": request, "category_name": category_name}
+    context.update(get_category_context(request))
+    return templates.TemplateResponse("upload.html", context)
+
 @app.get("/stats", response_class=HTMLResponse)
 def stats(request: Request):
     context = {"request": request}
     context.update(get_category_context(request))
     return templates.TemplateResponse("stats.html", context)
 
-@app.get("/vote/{category_name}", response_class=HTMLResponse)
+@app.get("/{category_name}/vote", response_class=HTMLResponse)
 def vote_by_category(category_name: str, request: Request):
     context = {"request": request, "category_name": category_name}
     context.update(get_category_context(request))
