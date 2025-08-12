@@ -527,7 +527,10 @@ class PhotoRankApp {
             if (response.ok) {
                 status.textContent = 'Upload successful!';
                 setTimeout(() => {
-                    window.location.href = '/';
+                    // If we're on "/{category}/upload", redirect to "/{category}/vote"; otherwise fallback to home
+                    const m = window.location.pathname.match(/^\/([^/]+)\/upload$/);
+                    const dest = m ? `/${encodeURIComponent(m[1])}/vote` : '/';
+                    window.location.href = dest;
                 }, 1000);
             } else if (response.status === 400) {
                 const result = await response.json();
