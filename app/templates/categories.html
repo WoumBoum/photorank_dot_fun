@@ -159,7 +159,7 @@ function displayCategories(categories) {
     } else {
         categories.forEach(category => {
             const row = document.createElement('tr');
-            row.onclick = () => { window.location.href = `/leaderboard/${encodeURIComponent(category.name)}` };
+            row.onclick = () => { window.location.href = `/${encodeURIComponent(category.name)}/leaderboard`; };
             
             const leaderInfo = category.current_leader_filename 
                 ? `<div class="current-leader">

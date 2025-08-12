@@ -35,8 +35,32 @@
 </div>
 
 <script>
-document.addEventListener('DOMContentLoaded', function () {
+document.addEventListener('DOMContentLoaded', async function () {
     const categoryName = "{{ category_name or '' }}";
+
+    if (categoryName) {
+        // Ensure session uses this category
+        try {
+            await fetch(`/api/categories/select-by-name/${encodeURIComponent(categoryName)}`, {
+                method: 'POST',
+                credentials: 'include'
+            });
+        } catch (e) { console.error('select-by-name failed', e); }
+
+        // Rewrite top nav links to category-prefixed paths
+        const nav = document.querySelector('header nav');
+        if (nav) {
+            const links = Array.from(nav.querySelectorAll('a'));
+            const relink = (text, leaf) => {
+                const a = links.find(x => x.textContent.trim() === text);
+                if (a) a.href = `/${encodeURIComponent(categoryName)}/${leaf}`;
+            };
+            relink('Vote', 'vote');
+            relink('Upload', 'upload');
+            relink('Leaderboard', 'leaderboard');
+        }
+    }
+
     loadLeaderboard(categoryName);
 });
 
