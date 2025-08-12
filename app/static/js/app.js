@@ -155,11 +155,12 @@ class PhotoRankApp {
     }
 
     async loadInitialData() {
-        if (window.location.pathname === '/') {
+        const path = window.location.pathname;
+        if (path === '/' || /\/[^/]+\/vote$/.test(path)) {
             await this.loadPhotoPair();
-        } else if (window.location.pathname === '/leaderboard') {
+        } else if (path === '/leaderboard' || /\/[^/]+\/leaderboard$/.test(path)) {
             await this.loadLeaderboard();
-        } else if (window.location.pathname === '/stats') {
+        } else if (path === '/stats') {
             await this.loadStats();
         }
     }
