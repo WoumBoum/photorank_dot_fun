@@ -1,4 +1,4 @@
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, constr
 from typing import Optional
 from datetime import datetime
 
@@ -24,6 +24,10 @@ class UserOut(UserBase):
 class CategoryBase(BaseModel):
     name: str
     description: Optional[str] = None
+
+
+class CategoryCreate(BaseModel):
+    name: constr(strip_whitespace=True, min_length=2, max_length=40, regex=r"^[A-Za-z0-9_-]+$")
 
 
 class CategoryOut(CategoryBase):
