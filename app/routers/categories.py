@@ -1,11 +1,12 @@
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 from typing import List
 
 from ..database import get_db
 from ..models import Category, Photo, Vote, User
-from ..schemas import CategoryOut, CategoryDetail
+from ..schemas import CategoryOut, CategoryDetail, CategoryCreate
+from ..oauth2 import get_current_user
 
 router = APIRouter(prefix="/categories", tags=['Categories'])
 
@@ -15,6 +16,26 @@ def get_categories(db: Session = Depends(get_db)):
     """Get all available categories"""
     categories = db.query(Category).all()
     return categories
+
+
+@router.post("/create", status_code=status.HTTP_201_CREATED)
+def create_category(payload: CategoryCreate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    """Create a new category (auth required). Names: [A-Za-z0-9_-], 2-40 chars, unique."""
+    name = payload.name.strip()
+    # Case-insensitive uniqueness check
+    existing = db.query(Category).filter(func.lower(Category.name) == func.lower(name)).first()
+    if existing:
+        raise HTTPException(status_code=400, detail="Category name already exists")
+    category = Category(name=name)
+    db.add(category)
+    try:
+        db.commit()
+    except Exception:
+        db.rollback()
+        # Fallback if race condition hits UNIQUE
+        raise HTTPException(status_code=400, detail="Category name already exists")
+    db.refresh(category)
+    return {"id": category.id, "name": category.name}
 
 
 @router.get("/details", response_model=List[CategoryDetail])

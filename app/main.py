@@ -83,3 +83,9 @@ def categories_page(request: Request):
     context = {"request": request}
     context.update(get_category_context(request))
     return templates.TemplateResponse("categories.html", context)
+
+@app.get("/categories/new", response_class=HTMLResponse)
+def categories_new_page(request: Request):
+    context = {"request": request}
+    context.update(get_category_context(request))
+    return templates.TemplateResponse("category_new.html", context)

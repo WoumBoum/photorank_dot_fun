@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container">
+    <header>
+        <h1>PhotoRank</h1>
+        <nav>
+            <a href="/leaderboard">Leaderboard</a>
+            <a href="/upload">Upload</a>
+            <a href="/stats">Stats</a>
+            <a href="/categories">Categories</a>
+            <a href="/login" id="auth-link">Login</a>
+            <button class="theme-toggle" id="theme-toggle" title="Toggle dark mode">◐</button>
+        </nav>
+    </header>
+
+    <section style="max-width:600px;margin:40px auto;border-top:1px solid #e0e0e0;padding-top:20px;">
+        <h2 style="margin-bottom:16px;">Create a new category</h2>
+        <form id="create-category-form" onsubmit="return submitCategory(event)">
+            <label for="name">Name (letters, numbers, '-' or '_'):</label>
+            <input type="text" id="name" name="name" required minlength="2" maxlength="40" pattern="[A-Za-z0-9_-]+" style="width:100%;padding:10px;margin:8px 0;border:1px solid #e0e0e0;">
+            <button type="submit" style="padding:10px 16px;border:1px solid #e0e0e0;background:#fff;cursor:pointer;">Create category</button>
+            <div id="form-error" style="color:#b00020;margin-top:10px;display:none;"></div>
+        </form>
+    </section>
+</div>
+
+<script>
+function requireAuth() {
+    const token = localStorage.getItem('token');
+    if (!token) {
+        window.location.href = '/login';
+        return null;
+    }
+    return token;
+}
+
+async function submitCategory(e) {
+    e.preventDefault();
+    const token = requireAuth();
+    if (!token) return false;
+
+    const name = document.getElementById('name').value.trim();
+    const err = document.getElementById('form-error');
+    err.style.display = 'none';
+
+    const pattern = /^[A-Za-z0-9_-]{2,40}$/;
+    if (!pattern.test(name)) {
+        err.textContent = 'Invalid name. Use 2-40 of A-Z, a-z, 0-9, - or _.';
+        err.style.display = 'block';
+        return false;
+    }
+
+    try {
+        const res = await fetch('/api/categories/create', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': 'Bearer ' + token
+            },
+            body: JSON.stringify({ name })
+        });
+        if (!res.ok) {
+            const data = await res.json().catch(() => ({}));
+            throw new Error(data.detail || 'Failed to create category');
+        }
+        window.location.href = '/categories';
+    } catch (e) {
+        err.textContent = e.message;
+        err.style.display = 'block';
+    }
+    return false;
+}
+</script>
+{% endblock %}
