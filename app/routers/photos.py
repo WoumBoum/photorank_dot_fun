@@ -11,6 +11,8 @@ import boto3
 from botocore.client import Config
 from dotenv import load_dotenv
 
+from fastapi import APIRouter, Depends, HTTPException, Request, Query
+
 from ..database import get_db
 from ..models import Photo, User, Vote, UploadLimit, Category
 from ..schemas import PhotoOut, PhotoCreate, PhotoPair, LeaderboardEntry
@@ -190,7 +192,7 @@ def get_leaderboard(
     db: Session = Depends(get_db)
 ):
     """Get top photos ranked by ELO"""
-    query = db.query(Photo).filter(Photo.total_duels >= 0)
+    query = db.query(Photo).filter(Photo.total_duels >= 50)
     
     if category_id:
         query = query.filter(Photo.category_id == category_id)
@@ -217,6 +219,38 @@ def get_leaderboard(
             category_name=category.name if category else "unknown"
         ))
     
+    return result
+
+
+@router.get("/leaderboard/{category_name}", response_model=List[LeaderboardEntry])
+def get_leaderboard_by_category(category_name: str, limit: int = Query(100, ge=0, le=1000), db: Session = Depends(get_db)):
+    """Leaderboard for a specific category by name (case-insensitive)."""
+    category = db.query(Category).filter(func.lower(Category.name) == func.lower(category_name)).first()
+    if not category:
+        raise HTTPException(status_code=404, detail="Category not found")
+
+    query = (
+        db.query(Photo)
+        .filter(Photo.category_id == category.id, Photo.total_duels >= 50)
+        .order_by(Photo.elo_rating.desc())
+    )
+    if limit > 0:
+        query = query.limit(limit)
+
+    photos = query.all()
+    result = []
+    for rank, photo in enumerate(photos, 1):
+        owner = db.query(User).filter(User.id == photo.owner_id).first()
+        result.append(LeaderboardEntry(
+            id=photo.id,
+            filename=photo.filename,
+            elo_rating=photo.elo_rating,
+            total_duels=photo.total_duels,
+            wins=photo.wins,
+            owner_username=owner.username if owner else "unknown",
+            rank=rank,
+            category_name=category.name
+        ))
     return result
 
 
