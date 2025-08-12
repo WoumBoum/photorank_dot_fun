@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container">
+    <header>
+        <h1>Leaderboard</h1>
+        <nav>
+            <a href="/">Vote</a>
+            <a href="/upload">Upload</a>
+            <a href="/stats">Stats</a>
+            <a href="/categories">Categories</a>
+            <a href="/login" id="auth-link">Login</a>
+            <button class="theme-toggle" id="theme-toggle" title="Toggle dark mode">◐</button>
+        </nav>
+    </header>
+
+    <div class="leaderboard">
+        <h2>Top 100 Photos</h2>
+        <div class="current-category">
+            {% if selected_category_name %}
+                <span>Showing: <strong>{{ selected_category_name }}</strong></span>
+                <a href="/categories" style="margin-left: 10px; font-size: 0.9em;">Change Category</a>
+            {% else %}
+                <span>No category selected</span>
+                <a href="/categories" style="margin-left: 10px; font-size: 0.9em;">Select Category</a>
+            {% endif %}
+        </div>
+        <div class="photo-grid" id="leaderboard-grid">
+            <!-- Photos will be loaded here -->
+        </div>
+    </div>
+</div>
+{% endblock %}

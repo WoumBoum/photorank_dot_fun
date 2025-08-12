@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container">
+    <header>
+        <h1>Upload</h1>
+        <nav>
+            <a href="/">Vote</a>
+            <a href="/leaderboard">Leaderboard</a>
+            <a href="/stats">Stats</a>
+            <a href="/categories">Categories</a>
+            <a href="/login" id="auth-link">Login</a>
+            <button class="theme-toggle" id="theme-toggle" title="Toggle dark mode">◐</button>
+        </nav>
+    </header>
+
+    <div class="upload-section">
+        <h2>Upload a Photo</h2>
+        <div class="current-category">
+            {% if selected_category_name %}
+                <span>Uploading to: <strong>{{ selected_category_name }}</strong></span>
+                <a href="/categories" style="margin-left: 10px; font-size: 0.9em;">Change Category</a>
+            {% else %}
+                <span>No category selected</span>
+                <a href="/categories" style="margin-left: 10px; font-size: 0.9em;">Select Category</a>
+            {% endif %}
+        </div>
+        <div class="upload-area" id="upload-area">
+            <p>Drag & drop or click to upload</p>
+            <input type="file" id="file-input" accept="image/*" style="display: none;">
+        </div>
+        <div class="upload-status" id="upload-status"></div>
+    </div>
+</div>
+{% endblock %}

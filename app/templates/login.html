@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container">
+    <header>
+        <h1>Login</h1>
+        <nav>
+            <a href="/">Vote</a>
+            <a href="/leaderboard">Leaderboard</a>
+            <a href="/upload">Upload</a>
+            <a href="/stats">Stats</a>
+            <button class="theme-toggle" id="theme-toggle" title="Toggle dark mode">◐</button>
+        </nav>
+    </header>
+
+    <div class="login-section">
+        <h2>Choose your login method</h2>
+        <div class="login-options">
+            <a href="/auth/login/github" class="login-button github">
+                Login with GitHub
+            </a>
+            <a href="/auth/login/google" class="login-button google">
+                Login with Google
+            </a>
+        </div>
+        <p class="login-note">
+            One-click login with your existing account. No passwords required.
+        </p>
+    </div>
+</div>
+
+<style>
+.login-section {
+    max-width: 400px;
+    margin: 0 auto;
+    text-align: center;
+}
+
+.login-options {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    margin: 2rem 0;
+}
+
+.login-button {
+    display: block;
+    padding: 1rem 2rem;
+    border: 1px solid var(--text-color);
+    text-decoration: none;
+    color: var(--text-color);
+    font-weight: 500;
+    transition: background-color 0.2s;
+}
+
+.login-button:hover {
+    background-color: var(--hover-color);
+}
+
+.login-note {
+    color: var(--secondary-text);
+    font-size: 0.9rem;
+    margin-top: 1rem;
+}
+</style>
+{% endblock %}

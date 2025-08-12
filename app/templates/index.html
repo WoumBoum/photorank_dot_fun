@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container">
+    <header>
+        <h1>PhotoRank</h1>
+        <nav>
+            <a href="/leaderboard">Leaderboard</a>
+            <a href="/upload">Upload</a>
+            <a href="/stats">Stats</a>
+            <a href="/categories">Categories</a>
+            <a href="/login" id="auth-link">Login</a>
+            <button class="theme-toggle" id="theme-toggle" title="Toggle dark mode">◐</button>
+        </nav>
+    </header>
+
+    <div class="vote-section">
+        <h2>Choose the better photo</h2>
+        <div class="current-category">
+            {% if selected_category_name %}
+                <span>Category: <strong>{{ selected_category_name }}</strong></span>
+                <a href="/categories" style="margin-left: 10px; font-size: 0.9em;">Change</a>
+            {% else %}
+                <span>No category selected</span>
+                <a href="/categories" style="margin-left: 10px; font-size: 0.9em;">Select Category</a>
+            {% endif %}
+        </div>
+        <div class="photo-pair">
+            <div class="photo-container" id="photo1">
+                <img src="" alt="Photo 1" id="img1">
+            </div>
+            <div class="vs">VS</div>
+            <div class="photo-container" id="photo2">
+                <img src="" alt="Photo 2" id="img2">
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

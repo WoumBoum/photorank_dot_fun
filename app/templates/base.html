@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PhotoRank</title>
+    <link rel="icon" type="image/x-icon" href="{{ url_for('static', path='/favicon.ico') }}">
+    <link rel="stylesheet" href="{{ url_for('static', path='/css/style.css') }}">
+    <script>
+        // Prevent flash of white in dark mode by setting theme immediately
+        (function() {
+            const savedTheme = localStorage.getItem('theme');
+            const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+            const theme = savedTheme || (prefersDark ? 'dark' : 'light');
+            
+            if (theme === 'dark') {
+                document.documentElement.setAttribute('data-theme', 'dark');
+            }
+        })();
+    </script>
+</head>
+<body>
+    <main>
+        {% block content %}{% endblock %}
+    </main>
+    <script>
+        // Authentication state management
+        function isAuthenticated() {
+            return localStorage.getItem('token') !== null;
+        }
+        
+        function updateNavigation() {
+            const navLinks = document.querySelectorAll('nav a');
+            const loginLink = Array.from(navLinks).find(link => link.href.includes('/login') || link.id === 'auth-link');
+            
+            if (loginLink) {
+                if (isAuthenticated()) {
+                    loginLink.textContent = 'Logout';
+                    loginLink.href = '#';
+                    loginLink.onclick = function(e) {
+                        e.preventDefault();
+                        logout();
+                    };
+                } else {
+                    loginLink.textContent = 'Login';
+                    loginLink.href = '/login';
+                    loginLink.onclick = null;
+                }
+            }
+        }
+        
+        // Make updateNavigation globally accessible
+        window.updateNavigation = updateNavigation;
+        
+        function logout() {
+            localStorage.removeItem('token');
+            updateNavigation();
+            // Redirect to home page after logout
+            window.location.href = '/';
+        }
+        
+        function checkAuthAndRedirect() {
+            const protectedPaths = ['/upload', '/stats'];
+            const currentPath = window.location.pathname;
+            
+            if (protectedPaths.includes(currentPath) && !isAuthenticated()) {
+                window.location.href = '/login';
+                return false;
+            }
+            return true;
+        }
+        
+        // Initialize auth state
+        document.addEventListener('DOMContentLoaded', function() {
+            updateNavigation();
+            checkAuthAndRedirect();
+        });
+        
+        // Check for auth state changes (e.g., after login)
+        window.addEventListener('load', function() {
+            // Check if we just logged in via URL parameter
+            const urlParams = new URLSearchParams(window.location.search);
+            if (urlParams.has('token')) {
+                setTimeout(updateNavigation, 100); // Small delay to ensure token is set
+            }
+        });
+        
+        // Also check auth state periodically for SPA-like behavior
+        setInterval(updateNavigation, 1000); // Check every second
+
+
+    </script>
+    <script src="{{ url_for('static', path='/js/app.js') }}"></script>
+    
+
+</body>
+</html>

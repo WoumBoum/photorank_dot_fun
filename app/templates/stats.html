@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container">
+    <header>
+        <h1>Your Stats</h1>
+        <nav>
+            <a href="/">Vote</a>
+            <a href="/leaderboard">Leaderboard</a>
+            <a href="/upload">Upload</a>
+            <a href="/categories">Categories</a>
+            <a href="/login" id="auth-link">Login</a>
+            <button class="theme-toggle" id="theme-toggle" title="Toggle dark mode">◐</button>
+        </nav>
+    </header>
+
+    <div class="stats-section">
+        <h2>Your Photos</h2>
+        <div class="stats-grid" id="stats-grid">
+            <!-- Stats will be loaded here -->
+        </div>
+    </div>
+</div>
+{% endblock %}
