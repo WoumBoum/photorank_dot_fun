@@ -2,27 +2,34 @@ from pydantic import BaseSettings
 
 
 class Settings(BaseSettings):
-    database_name: str
-    database_hostname: str
-    database_port: str
-    database_username: str
-    database_password: str
+    # Database (provide test-friendly defaults; override in real env)
+    database_name: str = "test_db"
+    database_hostname: str = "localhost"
+    database_port: str = "5432"
+    database_username: str = "postgres"
+    database_password: str = "postgres"
 
-    secret_key: str
-    algorithm: str
-    access_token_expire_minutes: int
+    # Auth/token defaults (non-secret placeholders for CI/tests)
+    secret_key: str = "dev-not-secret"
+    algorithm: str = "HS256"
+    access_token_expire_minutes: int = 30
 
-    swagger_username: str
-    swagger_password: str
+    # Swagger basic auth (for docs protection)
+    swagger_username: str = "test"
+    swagger_password: str = "test"
 
-    google_client_id: str
-    google_client_secret: str
-    github_client_id: str
-    github_client_secret: str
-    frontend_url: str
+    # OAuth client placeholders (override via env in real deployments)
+    google_client_id: str = "dummy-google-client-id"
+    google_client_secret: str = "dummy-google-client-secret"
+    github_client_id: str = "dummy-github-client-id"
+    github_client_secret: str = "dummy-github-client-secret"
+
+    # Frontend base URL used for CORS/redirects
+    frontend_url: str = "http://localhost:9001"
 
     class Config:
         env_file = ".env"
+        case_sensitive = False
 
 
 settings = Settings()
