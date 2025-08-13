@@ -6,7 +6,6 @@ from ..database import get_db
 from ..models import Vote, Photo, User
 from ..schemas import VoteCreate, VoteOut
 from ..oauth2 import get_current_user
-from ..turnstile import require_turnstile
 
 router = APIRouter(prefix="/votes", tags=['Votes'])
 
@@ -24,7 +23,7 @@ def calculate_elo_change(winner_rating: float, loser_rating: float) -> tuple[flo
     return winner_change, loser_change
 
 
-@router.post("/", response_model=VoteOut, dependencies=[Depends(__import__('app.turnstile', fromlist=['require_turnstile']).require_turnstile)])
+@router.post("/", response_model=VoteOut)
 def create_vote(
     vote: VoteCreate,
     db: Session = Depends(get_db),

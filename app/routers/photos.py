@@ -296,11 +296,7 @@ def get_leaderboard_session(
     return result
 
 
-from fastapi import File, UploadFile, Form
-from . import __init__ as _dummy
-from ..turnstile import require_turnstile
-
-@router.post("/upload", response_model=PhotoOut, dependencies=[Depends(require_turnstile)])
+@router.post("/upload", response_model=PhotoOut)
 async def upload_photo(
     file: UploadFile = File(...),
     category_id: int = Form(...),
@@ -380,7 +376,7 @@ async def upload_photo(
     )
 
 
-@router.post("/upload/session", response_model=PhotoOut, dependencies=[Depends(require_turnstile)])
+@router.post("/upload/session", response_model=PhotoOut)
 async def upload_photo_session(
     request: Request,
     file: UploadFile = File(...),

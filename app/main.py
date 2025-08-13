@@ -47,9 +47,6 @@ from fastapi.templating import Jinja2Templates
 from fastapi import Request
 
 templates = Jinja2Templates(directory="app/templates")
-from .config import settings
-# Expose Turnstile site key to all templates
-templates.env.globals["CF_TURNSTILE_SITE_KEY"] = settings.cf_turnstile_site_key
 
 @app.get("/")
 def index_redirect():
