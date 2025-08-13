@@ -27,9 +27,14 @@ class Settings(BaseSettings):
     # Frontend base URL used for CORS/redirects
     frontend_url: str = "http://localhost:9001"
 
+    # Cloudflare Turnstile
+    cf_turnstile_site_key: str = ""
+    cf_turnstile_secret_key: str = ""
+
     class Config:
         env_file = ".env"
         case_sensitive = False
+
 
 
 settings = Settings()
