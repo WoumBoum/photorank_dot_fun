@@ -26,7 +26,7 @@ def create_category(payload: CategoryCreate, db: Session = Depends(get_db), curr
     existing = db.query(Category).filter(func.lower(Category.name) == func.lower(name)).first()
     if existing:
         raise HTTPException(status_code=400, detail="Category name already exists")
-    category = Category(name=name)
+    category = Category(name=name, question=payload.question.strip(), owner_id=current_user.id)
     db.add(category)
     try:
         db.commit()
@@ -74,7 +74,7 @@ def get_categories_with_details(db: Session = Depends(get_db)):
         leaders.c.owner_username.label('current_leader_owner')
     ).outerjoin(vote_counts, Category.id == vote_counts.c.category_id
     ).outerjoin(leaders, (Category.id == leaders.c.category_id) & (leaders.c.rank == 1)
-    ).order_by(Category.name).all()
+    ).order_by(func.coalesce(vote_counts.c.total_votes, 0).desc(), Category.name.asc()).all()
     
     return categories
 

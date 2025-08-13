@@ -26,6 +26,22 @@
         <div class="stats-grid" id="stats-grid">
             <!-- Stats will be loaded here -->
         </div>
+        <h2>Your Categories</h2>
+        <div id="your-categories" style="margin-top:12px;font-size:0.95em;color:#333;"></div>
+        <script>
+        document.addEventListener('DOMContentLoaded', async function(){
+          try{
+            const token = localStorage.getItem('token');
+            if(!token) return;
+            const me = await (await fetch('/api/users/me', {headers:{'Authorization':'Bearer '+token}})).json();
+            const cats = await (await fetch('/api/categories', {headers:{'Authorization':'Bearer '+token}})).json();
+            const mine = cats.filter(c=>c.owner_id===me.id);
+            const container = document.getElementById('your-categories');
+            if(!mine.length){container.textContent='No categories yet.';return;}
+            container.innerHTML = mine.map(c=>`<div><a href="/${encodeURIComponent(c.name)}/leaderboard">${c.name}</a> — ${c.question}</div>`).join('');
+          }catch(e){console.error(e);}
+        });
+        </script>
     </div>
 </div>
 {% endblock %}

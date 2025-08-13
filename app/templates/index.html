@@ -15,7 +15,7 @@
     </header>
 
     <div class="vote-section">
-        <h2>Choose the better photo</h2>
+        <h2 id="vote-question">Choose the better photo</h2>
         <div class="current-category">
             {% if selected_category_name %}
                 <span>Category: <strong>{{ selected_category_name }}</strong></span>
@@ -41,6 +41,14 @@
 document.addEventListener('DOMContentLoaded', async function () {
   const categoryName = "{{ category_name or '' }}";
   if (categoryName) {
+    try {
+      const res = await fetch(`/api/categories/select-by-name/${encodeURIComponent(categoryName)}`, { method: 'POST', credentials: 'include' });
+      // fetch question for the category
+      const cat = await (await fetch('/api/categories/' + encodeURIComponent((await res.json()).category_id))).json();
+      if (cat && cat.question) {
+        document.getElementById('vote-question').textContent = cat.question;
+      }
+    } catch (e) { console.error('Unable to select category by name', e); }
     try {
       await fetch(`/api/categories/select-by-name/${encodeURIComponent(categoryName)}`, { method: 'POST', credentials: 'include' });
     } catch (e) { console.error('Unable to select category by name', e); }

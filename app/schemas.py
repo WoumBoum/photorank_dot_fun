@@ -28,11 +28,14 @@ class CategoryBase(BaseModel):
 
 class CategoryCreate(BaseModel):
     name: constr(strip_whitespace=True, min_length=2, max_length=40, regex=r"^[A-Za-z0-9_-]+$")
+    question: constr(strip_whitespace=True, min_length=4, max_length=200)
 
 
 class CategoryOut(CategoryBase):
     id: int
     created_at: datetime
+    question: str
+    owner_id: int | None = None
 
     class Config:
         orm_mode = True

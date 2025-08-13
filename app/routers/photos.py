@@ -192,7 +192,7 @@ def get_leaderboard(
     db: Session = Depends(get_db)
 ):
     """Get top photos ranked by ELO"""
-    query = db.query(Photo).filter(Photo.total_duels >= 5)
+    query = db.query(Photo).filter(Photo.total_duels >= 2)
     
     if category_id:
         query = query.filter(Photo.category_id == category_id)
@@ -231,7 +231,7 @@ def get_leaderboard_by_category(category_name: str, limit: int = Query(100, ge=0
 
     query = (
         db.query(Photo)
-        .filter(Photo.category_id == category.id, Photo.total_duels >= 5)
+        .filter(Photo.category_id == category.id, Photo.total_duels >= 2)
         .order_by(Photo.elo_rating.desc())
     )
     if limit > 0:

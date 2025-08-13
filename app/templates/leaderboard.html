@@ -15,7 +15,7 @@
     </header>
 
     <div class="leaderboard">
-        <h2>Top 100 Photos</h2>
+        <h2 id="category-question">Top 100 Photos</h2>
         <div class="current-category">
             {% if category_name %}
                 <span>Category: <strong>{{ category_name }}</strong></span>
@@ -39,6 +39,11 @@ document.addEventListener('DOMContentLoaded', async function () {
     const categoryName = "{{ category_name or '' }}";
 
     if (categoryName) {
+        try {
+            const cat = await (await fetch('/api/categories/select-by-name/' + encodeURIComponent(categoryName), { method: 'POST', credentials: 'include' })).json();
+            const catData = await (await fetch('/api/categories/' + cat.category_id)).json();
+            if (catData && catData.question) document.getElementById('category-question').textContent = catData.question;
+        } catch (e) { console.error('failed to fetch category question', e); }
         // Ensure session uses this category
         try {
             await fetch(`/api/categories/select-by-name/${encodeURIComponent(categoryName)}`, {
