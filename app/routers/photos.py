@@ -296,84 +296,10 @@ def get_leaderboard_session(
     return result
 
 
-@router.post("/upload", response_model=PhotoOut)
-async def upload_photo(
-    file: UploadFile = File(...),
-    category_id: int = Form(...),
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
-):
-    """Upload a new photo"""
-    # Check file type
-    if not file.content_type.startswith('image/'):
-        raise HTTPException(status_code=400, detail="File must be an image")
-    
-    # Check upload limit
-    from ..models import UploadLimit
-    today = datetime.utcnow().date()
-    upload_limit = db.query(UploadLimit).filter(
-        UploadLimit.user_id == current_user.id
-    ).first()
-    
-    if upload_limit:
-        if upload_limit.last_upload_date == today:
-            if upload_limit.upload_count >= 50000: #please don't change I keep it like that for debugging
-                raise HTTPException(
-                    status_code=429, 
-                    detail="Daily upload limit reached (5 photos/day)"
-                )
-            upload_limit.upload_count += 1
-        else:
-            upload_limit.upload_count = 1
-            upload_limit.last_upload_date = datetime.utcnow()
-    else:
-        upload_limit = UploadLimit(
-            user_id=current_user.id,
-            upload_count=1,
-            last_upload_date=datetime.utcnow()
-        )
-        db.add(upload_limit)
-    
-    # Generate unique filename
-    file_extension = Path(file.filename).suffix
-    filename = f"{uuid.uuid4()}{file_extension}"
-    
-    # Upload to R2
-    content = await file.read()
-    s3_client.put_object(
-        Bucket=R2_BUCKET_NAME,
-        Key=filename,
-        Body=content,
-        ContentType=file.content_type
-    )
-    
-    # Validate category
-    category = db.query(Category).filter(Category.id == category_id).first()
-    if not category:
-        raise HTTPException(status_code=400, detail="Invalid category")
-    
-    # Create photo record
-    photo = Photo(
-        filename=filename,
-        owner_id=current_user.id,
-        category_id=category_id
-    )
-    db.add(photo)
-    db.commit()
-    db.refresh(photo)
-    
-    return PhotoOut(
-        id=photo.id,
-        filename=photo.filename,
-        elo_rating=photo.elo_rating,
-        total_duels=photo.total_duels,
-        wins=photo.wins,
-        created_at=photo.created_at,
-        owner_id=photo.owner_id,
-        owner_username=current_user.username,
-        category_id=photo.category_id,
-        category_name=category.name
-    )
+
+
+
+
 
 
 @router.post("/upload/session", response_model=PhotoOut)
@@ -459,6 +385,96 @@ async def upload_photo_session(
         category_id=photo.category_id,
         category_name=category.name
     )
+
+
+@router.post("/upload/session/batch", response_model=List[PhotoOut])
+async def upload_photos_session_batch(
+    request: Request,
+    files: List[UploadFile] = File(...),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Upload up to 10 photos using session category"""
+    selected_category_id = request.session.get("selected_category_id")
+    if not selected_category_id:
+        raise HTTPException(status_code=400, detail="No category selected")
+
+    if not files or len(files) == 0:
+        raise HTTPException(status_code=400, detail="No files provided")
+    if len(files) > 10:
+        raise HTTPException(status_code=400, detail="Batch size exceeds limit of 10")
+
+    for f in files:
+        if not f.content_type or not f.content_type.startswith('image/'):
+            raise HTTPException(status_code=400, detail="All files must be images")
+
+    # Rate limit cumulative
+    from ..models import UploadLimit
+    today = datetime.utcnow().date()
+    upload_limit = db.query(UploadLimit).filter(UploadLimit.user_id == current_user.id).first()
+
+    if upload_limit:
+        if upload_limit.last_upload_date == today:
+            if upload_limit.upload_count + len(files) > 50000:  # do not change threshold
+                raise HTTPException(status_code=429, detail="Daily upload limit reached (5 photos/day)")
+            upload_limit.upload_count += len(files)
+        else:
+            upload_limit.upload_count = len(files)
+            upload_limit.last_upload_date = datetime.utcnow()
+    else:
+        upload_limit = UploadLimit(
+            user_id=current_user.id,
+            upload_count=len(files),
+            last_upload_date=datetime.utcnow()
+        )
+        db.add(upload_limit)
+
+    category = db.query(Category).filter(Category.id == selected_category_id).first()
+    if not category:
+        raise HTTPException(status_code=400, detail="Invalid category")
+
+    created_photos: List[Photo] = []
+    try:
+        for f in files:
+            file_extension = Path(f.filename).suffix
+            filename = f"{uuid.uuid4()}{file_extension}"
+            content = await f.read()
+            s3_client.put_object(
+                Bucket=R2_BUCKET_NAME,
+                Key=filename,
+                Body=content,
+                ContentType=f.content_type
+            )
+
+            photo = Photo(
+                filename=filename,
+                owner_id=current_user.id,
+                category_id=selected_category_id
+            )
+            db.add(photo)
+            created_photos.append(photo)
+        db.commit()
+        for p in created_photos:
+            db.refresh(p)
+    except Exception:
+        db.rollback()
+        raise HTTPException(status_code=500, detail="Failed to upload batch")
+
+    return [
+        PhotoOut(
+            id=p.id,
+            filename=p.filename,
+            elo_rating=p.elo_rating,
+            total_duels=p.total_duels,
+            wins=p.wins,
+            created_at=p.created_at,
+            owner_id=p.owner_id,
+            owner_username=current_user.username,
+            category_id=p.category_id,
+            category_name=category.name
+        )
+        for p in created_photos
+    ]
 
 
 @router.get("/{filename}")

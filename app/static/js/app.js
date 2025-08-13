@@ -137,10 +137,10 @@ class PhotoRankApp {
             uploadArea.addEventListener('drop', (e) => {
                 e.preventDefault();
                 uploadArea.classList.remove('dragover');
-                this.handleFileUpload(e.dataTransfer.files[0]);
+                this.handleFilesUpload(e.dataTransfer.files);
             });
             fileInput.addEventListener('change', (e) => {
-                this.handleFileUpload(e.target.files[0]);
+                this.handleFilesUpload(e.target.files);
             });
         }
 
@@ -543,48 +543,48 @@ class PhotoRankApp {
         }
     }
 
-    async handleFileUpload(file) {
-        if (!file || !file.type.startsWith('image/')) return;
-        
+    async handleFilesUpload(fileList) {
+        const files = Array.from(fileList || []).filter(f => f && f.type && f.type.startsWith('image/'));
+        if (files.length === 0) return;
+
         if (!this.isAuthenticated()) {
             window.location.href = '/login';
             return;
         }
-        
-        const formData = new FormData();
-        formData.append('file', file);
-        
+
         const status = document.getElementById('upload-status');
-        if (status) {
-            status.textContent = 'Uploading...';
-        }
-        
+        if (status) status.textContent = 'Uploading...';
+
+        // Cap to 10
+        const limited = files.slice(0, 10);
+        const formData = new FormData();
+        for (const f of limited) formData.append('files', f);
+
         try {
-            const response = await this.makeAuthenticatedRequest('/api/photos/upload/session', {
+            const response = await this.makeAuthenticatedRequest('/api/photos/upload/session/batch', {
                 method: 'POST',
                 body: formData,
                 credentials: 'include'
             });
-            
+
             if (response.ok) {
-                status.textContent = 'Upload successful!';
+                if (status) status.textContent = `Uploaded ${limited.length} file(s)!`;
                 setTimeout(() => {
-                    // If we're on "/{category}/upload", redirect to "/{category}/vote"; otherwise fallback to home
                     const m = window.location.pathname.match(/^\/([^/]+)\/upload$/);
                     const dest = m ? `/${encodeURIComponent(m[1])}/vote` : '/';
                     window.location.href = dest;
-                }, 1000);
-            } else if (response.status === 400) {
-                const result = await response.json();
-                if (result.detail === 'No category selected') {
+                }, 800);
+            } else {
+                const result = await response.json().catch(() => ({}));
+                if (response.status === 400 && result.detail === 'No category selected') {
                     window.location.href = '/categories';
                 } else {
-                    status.textContent = `Error: ${result.detail}`;
+                    if (status) status.textContent = `Error: ${result.detail || 'Upload failed'}`;
                 }
             }
-        } catch (error) {
-            status.textContent = 'Upload failed';
-            console.error('Upload error:', error);
+        } catch (e) {
+            if (status) status.textContent = 'Upload failed';
+            console.error('Upload error:', e);
         }
     }
 }
