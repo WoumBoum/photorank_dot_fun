@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, Request
+import hashlib
 from fastapi.responses import RedirectResponse
 from sqlalchemy.orm import Session
 import httpx
@@ -93,7 +94,7 @@ async def github_callback(code: str, db: Session = Depends(get_db)):
             if not user:
                 user = User(
                     email=primary_email,
-                    username=user_data["login"],
+                    username="anon" + hashlib.sha256(user_data["login"].encode()).hexdigest()[:10],
                     provider="github",
                     provider_id=str(user_data["id"])
                 )
@@ -153,7 +154,7 @@ async def google_callback(code: str, db: Session = Depends(get_db)):
             if not user:
                 user = User(
                     email=user_data["email"],
-                    username=user_data["name"],
+                    username="anon" + hashlib.sha256(user_data["name"].encode()).hexdigest()[:10],
                     provider="google",
                     provider_id=user_data["id"]
                 )
