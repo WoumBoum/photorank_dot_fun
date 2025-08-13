@@ -1,4 +1,4 @@
-from pydantic import BaseModel, EmailStr, constr
+from pydantic import BaseModel, EmailStr, constr, validator
 from typing import Optional
 from datetime import datetime
 
@@ -102,6 +102,10 @@ class LeaderboardEntry(BaseModel):
     owner_username: str
     rank: int
     category_name: str
+
+
+class UsernameUpdate(BaseModel):
+    username: constr(strip_whitespace=True, min_length=3, max_length=20, regex=r"^[a-z0-9_-]+$")
 
 
 class UserStats(BaseModel):

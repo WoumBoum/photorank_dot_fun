@@ -4,7 +4,7 @@ from sqlalchemy import func
 
 from ..database import get_db
 from ..models import User, Photo, Vote, Category
-from ..schemas import UserStats, LeaderboardEntry
+from ..schemas import UserStats, LeaderboardEntry, UsernameUpdate  # type: ignore, UsernameUpdate
 from ..oauth2 import get_current_user
 
 router = APIRouter(prefix="/users", tags=['Users'])
@@ -79,3 +79,24 @@ def get_current_user_info(current_user: User = Depends(get_current_user)):
         "username": current_user.username,
         "created_at": current_user.created_at
     }
+
+
+@router.patch("/me/username")
+def update_username(payload: UsernameUpdate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    """Update current user's pseudonym (username)."""
+    # Reserved names
+    reserved = {"admin", "administrator", "moderator", "support"}
+    new_name = payload.username.lower()
+    if new_name in reserved:
+        raise HTTPException(status_code=400, detail="Username is reserved")
+
+    # Check uniqueness
+    exists = db.query(User).filter(User.username == new_name).first()
+    if exists and exists.id != current_user.id:
+        raise HTTPException(status_code=409, detail="Username already taken")
+
+    current_user.username = new_name
+    db.add(current_user)
+    db.commit()
+    db.refresh(current_user)
+    return {"username": current_user.username}

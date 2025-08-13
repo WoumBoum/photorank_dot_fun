@@ -162,6 +162,7 @@ class PhotoRankApp {
             await this.loadLeaderboard();
         } else if (path === '/stats') {
             await this.loadStats();
+            this.initPseudonymEditor();
         }
     }
 
@@ -419,6 +420,47 @@ class PhotoRankApp {
                 }
             }
         }
+    }
+
+    initPseudonymEditor() {
+        const input = document.getElementById('pseudo-input');
+        const saveBtn = document.getElementById('pseudo-save');
+        const status = document.getElementById('pseudo-status');
+        if (!input || !saveBtn) return;
+
+        // Preload current username
+        this.makeAuthenticatedRequest('/api/users/me').then(r => r.json()).then(me => {
+            input.value = me.username || '';
+        }).catch(() => {});
+
+        saveBtn.addEventListener('click', async () => {
+            const newName = (input.value || '').trim().toLowerCase();
+            status.textContent = '';
+            if (!/^[a-z0-9_-]{3,20}$/.test(newName)) {
+                status.textContent = 'Invalid: 3-20 chars a-z0-9_-';
+                return;
+            }
+            saveBtn.disabled = true;
+            saveBtn.textContent = 'Saving...';
+            try {
+                const resp = await this.makeAuthenticatedRequest('/api/users/me/username', {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username: newName })
+                });
+                if (resp.ok) {
+                    status.textContent = 'Saved';
+                } else {
+                    const err = await resp.json().catch(() => ({}));
+                    status.textContent = err.detail || 'Error';
+                }
+            } catch (e) {
+                status.textContent = 'Network error';
+            } finally {
+                saveBtn.disabled = false;
+                saveBtn.textContent = 'Save';
+            }
+        });
     }
 
     displayStats(stats) {
