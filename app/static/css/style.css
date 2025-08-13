@@ -161,6 +161,16 @@ nav {
     margin: 0 auto;
 }
 
+/* Make leaderboard images behave like stats */
+.photo-item .photo img {
+    display: block;
+    width: 100%;
+    height: auto;
+    max-height: 300px; /* match stats visual box */
+    object-fit: contain;
+    border: 1px solid var(--border-color);
+}
+
 .leaderboard h2 {
     text-align: center;
     margin-bottom: 2rem;
