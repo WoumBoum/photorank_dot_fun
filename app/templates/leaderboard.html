@@ -16,6 +16,7 @@
 
     <div class="leaderboard">
         <h2 id="category-question">Top 100 Photos</h2>
+        <div id="category-vote-count" style="margin-top:6px;color:#666;font-size:0.95em;"></div>
         <div class="current-category">
             {% if category_name %}
                 <span>Category: <strong>{{ category_name }}</strong></span>
@@ -41,6 +42,15 @@ document.addEventListener('DOMContentLoaded', async function () {
     if (categoryName) {
         try {
             const cat = await (await fetch('/api/categories/select-by-name/' + encodeURIComponent(categoryName), { method: 'POST', credentials: 'include' })).json();
+            // Load category details for vote count
+            try {
+                const detailsList = await (await fetch('/api/categories/details?t=' + Date.now())).json();
+                const det = detailsList.find(x => x.name === categoryName);
+                if (det && typeof det.total_votes !== 'undefined') {
+                    const el = document.getElementById('category-vote-count');
+                    if (el) el.textContent = `ranking based on ${det.total_votes} votes`;
+                }
+            } catch(e) { /* ignore */ }
             const catData = await (await fetch('/api/categories/' + cat.category_id)).json();
             if (catData && catData.question) document.getElementById('category-question').textContent = catData.question;
         } catch (e) { console.error('failed to fetch category question', e); }
