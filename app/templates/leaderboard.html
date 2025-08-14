@@ -141,6 +141,21 @@ async function setupBoostPanel(categoryName){
         }catch(e){ status.textContent = 'error'; }
     };
 }
+
+async function loadLeaderboard(categoryName) {
+    try {
+        let url = '/api/photos/leaderboard';
+        if (categoryName) url = `/api/photos/leaderboard/${encodeURIComponent(categoryName)}`;
+        const res = await fetch(url + '?t=' + Date.now());
+        if (!res.ok) throw new Error('Failed to load leaderboard');
+        const data = await res.json();
+        await renderLeaderboard(data);
+    } catch (e) {
+        console.error('Error loading leaderboard:', e);
+        const grid = document.getElementById('leaderboard-grid');
+        if (grid) grid.innerHTML = '<div style="padding:20px;color:#666;">Failed to load.</div>';
+    }
+}
  
 async function renderLeaderboard(entries) {
     const grid = document.getElementById('leaderboard-grid');
