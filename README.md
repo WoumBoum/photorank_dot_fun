@@ -80,6 +80,27 @@ alembic revision --autogenerate -m "description"
 alembic upgrade head
 ```
 
+## Production DB note: boosted_votes
+
+In production (Supabase), the `boosted_votes` column on `categories` was applied manually via the Supabase SQL editor, then marked as applied in Alembic to keep history aligned.
+
+Commands:
+```bash
+# Point to Supabase DB (adjust credentials/host/port/db)
+export DATABASE_URL="postgresql://USER:PASSWORD@HOST:PORT/DBNAME?sslmode=require"
+
+# Mark the migration as applied without running it
+alembic stamp boosted_votes_on_categories
+```
+
+Rationale:
+- Render free tier lacks post-deploy hooks, so we couldn’t auto-run Alembic.
+- Manual SQL change followed by `alembic stamp` keeps Alembic history consistent.
+- Fresh databases (local/new teammates) will still run the migration file normally during `alembic upgrade head`.
+
+Reminder:
+- Ensure `MODERATOR_PROVIDER` and `MODERATOR_PROVIDER_ID` are set on the API service (Render) for moderator auth.
+
 ## Project Structure
 ```
 app/

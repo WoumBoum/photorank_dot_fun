@@ -11,6 +11,14 @@ from .photos import s3_client, R2_BUCKET_NAME  # reuse R2 client
 
 router = APIRouter(prefix="/categories", tags=['Categories'])
 
+# Helper to check site moderator via env (same as delete_category)
+import os
+
+def is_site_moderator(user: User) -> bool:
+    mod_provider = os.getenv("MODERATOR_PROVIDER")
+    mod_provider_id = os.getenv("MODERATOR_PROVIDER_ID")
+    return bool(mod_provider and mod_provider_id and user.provider == mod_provider and str(user.provider_id) == str(mod_provider_id))
+
 
 @router.get("/", response_model=List[CategoryOut])
 def get_categories(db: Session = Depends(get_db)):
@@ -69,13 +77,15 @@ def get_categories_with_details(db: Session = Depends(get_db)):
         Category.name,
         Category.description,
         Category.created_at,
-        func.coalesce(vote_counts.c.total_votes, 0).label('total_votes'),
+        func.coalesce(vote_counts.c.total_votes, 0).label('raw_total_votes'),
+        func.coalesce(Category.boosted_votes, 0).label('boosted_votes'),
+        (func.coalesce(vote_counts.c.total_votes, 0) + func.coalesce(Category.boosted_votes, 0)).label('total_votes'),
         leaders.c.filename.label('current_leader_filename'),
         leaders.c.elo_rating.label('current_leader_elo'),
         leaders.c.owner_username.label('current_leader_owner')
     ).outerjoin(vote_counts, Category.id == vote_counts.c.category_id
     ).outerjoin(leaders, (Category.id == leaders.c.category_id) & (leaders.c.rank == 1)
-    ).order_by(func.coalesce(vote_counts.c.total_votes, 0).desc(), Category.name.asc()).all()
+    ).order_by((func.coalesce(vote_counts.c.total_votes, 0) + func.coalesce(Category.boosted_votes, 0)).desc(), Category.name.asc()).all()
     
     return categories
 
@@ -113,6 +123,22 @@ def select_category_by_name(category_name: str, request: Request, db: Session = 
     request.session["selected_category_name"] = category.name
     return {"message": f"Category '{category.name}' selected", "category_id": category.id}
 
+
+@router.post("/{category_id}/boost-votes")
+def boost_votes(category_id: int, amount: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    """Increase boosted_votes for a category. Allowed to category owner or site moderator."""
+    category = db.query(Category).filter(Category.id == category_id).first()
+    if not category:
+        raise HTTPException(status_code=404, detail="Category not found")
+    if current_user.id != (category.owner_id or -1) and not is_site_moderator(current_user):
+        raise HTTPException(status_code=403, detail="Not authorized")
+    if amount is None or amount == 0:
+        raise HTTPException(status_code=400, detail="Amount must be non-zero")
+    if amount < 0 and (category.boosted_votes or 0) + amount < 0:
+        raise HTTPException(status_code=400, detail="Cannot reduce below zero")
+    category.boosted_votes = (category.boosted_votes or 0) + int(amount)
+    db.commit()
+    return {"message": "Boost applied", "boosted_votes": category.boosted_votes, "category_id": category.id}
 
 @router.delete("/{category_id}")
 def delete_category(category_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):

@@ -208,6 +208,22 @@ alembic revision --autogenerate -m "description"
 alembic upgrade head
 ```
 
+### Production DB note: boosted_votes
+The `boosted_votes` column on `categories` was created manually on Supabase and then stamped in Alembic to keep history aligned.
+
+Do not attempt to re-apply it in production. If you need to align a new environment:
+```bash
+export DATABASE_URL="postgresql://USER:PASSWORD@HOST:PORT/DBNAME?sslmode=require"
+alembic stamp boosted_votes_on_categories
+```
+
+Why:
+- Render (free) has no post-deploy hook; we used manual SQL + `alembic stamp`.
+- New/fresh DBs should still use `alembic upgrade head` to create the column.
+
+Ops:
+- Moderator auth relies on `MODERATOR_PROVIDER` and `MODERATOR_PROVIDER_ID`. Set them in Render.
+
 ### **Testing**
 ```bash
 # Create migration: alembic revision --autogenerate -m "description"

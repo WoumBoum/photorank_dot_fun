@@ -199,7 +199,9 @@ async function maybeAddDeleteButton(cell, category){
         const meRes = await fetch('/api/users/me', { headers: { Authorization: 'Bearer ' + token }});
         if(!meRes.ok) return;
         const me = await meRes.json();
-        if(me && me.username === 'anon9d1614927f'){
+        // Rely solely on server-side authorization; UI does not infer moderator by pseudonym.
+        const isLoggedIn = !!me;
+        if(isLoggedIn){
             const btn = document.createElement('button');
             btn.textContent = 'Delete';
             btn.className = 'delete-btn';
