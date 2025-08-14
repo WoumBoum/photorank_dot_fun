@@ -82,13 +82,31 @@ async function loadLeaderboard(categoryName) {
     }
 }
 
-function renderLeaderboard(entries) {
+async function isCategoryOwner(categoryName){
+    try{
+        if(!categoryName) return false;
+        const catRes = await fetch('/api/categories/select-by-name/' + encodeURIComponent(categoryName), {method:'POST', credentials:'include'});
+        if(!catRes.ok) return false;
+        const cat = await catRes.json();
+        const details = await (await fetch('/api/categories/' + cat.category_id)).json();
+        const token = localStorage.getItem('token');
+        if(!token) return false;
+        const meRes = await fetch('/api/users/me', { headers: { Authorization: 'Bearer ' + token }});
+        if(!meRes.ok) return false;
+        const me = await meRes.json();
+        return details && details.owner_id && me && details.owner_id === me.id;
+    }catch(e){ return false; }
+}
+
+async function renderLeaderboard(entries) {
     const grid = document.getElementById('leaderboard-grid');
     grid.innerHTML = '';
     if (!entries.length) {
         grid.innerHTML = '<div style="padding:20px;color:#666;">No eligible photos yet.</div>';
         return;
     }
+    const categoryName = "{{ category_name or '' }}";
+    const canModerate = await isCategoryOwner(categoryName);
     entries.forEach((e, idx) => {
         const div = document.createElement('div');
         div.className = 'photo-item';
@@ -101,7 +119,26 @@ function renderLeaderboard(entries) {
                 <span>${crown}${Math.round(e.elo_rating)}</span>
                 <span>${e.owner_username}</span>
             </div>
+            ${canModerate ? `<button class="btn-delete" data-photo-id="${e.id}">Delete</button>` : ''}
         `;
+        if(canModerate){
+            const btn = div.querySelector('.btn-delete');
+            btn.addEventListener('click', async () => {
+                if(!confirm('Delete this photo?')) return;
+                try{
+                    const token = localStorage.getItem('token');
+                    if(!token){ alert('Login required'); return; }
+                    const catName = categoryName;
+                    const catSel = await (await fetch('/api/categories/select-by-name/' + encodeURIComponent(catName), {method:'POST', credentials:'include'})).json();
+                    const res = await fetch(`/api/photos/categories/${catSel.category_id}/photos/${e.id}` , {
+                        method: 'DELETE',
+                        headers: { Authorization: 'Bearer ' + token }
+                    });
+                    if(res.ok){ div.remove(); }
+                    else{ const d = await res.json().catch(()=>({detail:'Failed'})); alert(d.detail || 'Failed to delete'); }
+                }catch(err){ alert('Error deleting'); }
+            });
+        }
         grid.appendChild(div);
     });
 }

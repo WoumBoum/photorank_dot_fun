@@ -546,3 +546,38 @@ async def delete_photo(
     db.commit()
     
     return {"message": "Photo deleted successfully"}
+
+
+@router.delete("/categories/{category_id}/photos/{photo_id}")
+async def delete_photo_as_category_owner(
+    category_id: int,
+    photo_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Category owner can delete any photo in their category."""
+    category = db.query(Category).filter(Category.id == category_id).first()
+    if not category:
+        raise HTTPException(status_code=404, detail="Category not found")
+    if category.owner_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Not authorized to moderate this category")
+
+    photo = db.query(Photo).filter(Photo.id == photo_id, Photo.category_id == category_id).first()
+    if not photo:
+        raise HTTPException(status_code=404, detail="Photo not found in this category")
+
+    # Delete the file from R2 storage
+    try:
+        s3_client.delete_object(Bucket=R2_BUCKET_NAME, Key=photo.filename)
+    except Exception as e:
+        print(f"Warning: Could not delete file from R2: {e}")
+
+    # Delete associated votes
+    db.query(Vote).filter(
+        (Vote.winner_id == photo_id) | (Vote.loser_id == photo_id)
+    ).delete()
+
+    db.delete(photo)
+    db.commit()
+
+    return {"message": "Photo deleted successfully"}
