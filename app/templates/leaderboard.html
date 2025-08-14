@@ -15,7 +15,7 @@
     </header>
 
     <div class="leaderboard">
-        <h2 id="category-question">Top 100 Photos</h2>
+        <h2 id="category-question">Results of:</h2>
         <div id="category-vote-count" style="margin-top:6px;color:#666;font-size:0.95em;"></div>
         <div class="current-category">
             {% if category_name %}
@@ -76,7 +76,7 @@ document.addEventListener('DOMContentLoaded', async function () {
                 }
             } catch(e) { /* ignore */ }
             const catData = await (await fetch('/api/categories/' + cat.category_id)).json();
-            if (catData && catData.question) document.getElementById('category-question').textContent = catData.question;
+            if (catData && catData.question) document.getElementById('category-question').textContent = `Results of: ${catData.question}`;
         } catch (e) { console.error('failed to fetch category question', e); }
         // Ensure session uses this category
         try {
