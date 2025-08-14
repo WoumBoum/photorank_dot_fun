@@ -45,6 +45,7 @@ class CategoryDetail(CategoryBase):
     id: int
     created_at: datetime
     total_votes: int
+    owner_id: Optional[int] = None
     current_leader_filename: Optional[str] = None
     current_leader_elo: Optional[float] = None
     current_leader_owner: Optional[str] = None

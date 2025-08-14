@@ -80,6 +80,7 @@ def get_categories_with_details(db: Session = Depends(get_db)):
         func.coalesce(vote_counts.c.total_votes, 0).label('raw_total_votes'),
         func.coalesce(Category.boosted_votes, 0).label('boosted_votes'),
         (func.coalesce(vote_counts.c.total_votes, 0) + func.coalesce(Category.boosted_votes, 0)).label('total_votes'),
+        Category.owner_id.label('owner_id'),
         leaders.c.filename.label('current_leader_filename'),
         leaders.c.elo_rating.label('current_leader_elo'),
         leaders.c.owner_username.label('current_leader_owner')

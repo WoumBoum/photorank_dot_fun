@@ -30,6 +30,7 @@
                         <th>Total Votes</th>
                         <th>Created</th>
                         <th>Current Leader</th>
+                        <th></th>
                     </tr>
                 </thead>
                 <tbody id="categories-tbody">
@@ -201,7 +202,10 @@ async function maybeAddDeleteButton(cell, category){
         const me = await meRes.json();
         // Rely solely on server-side authorization; UI does not infer moderator by pseudonym.
         const isLoggedIn = !!me;
-        if(isLoggedIn){
+        // show only for owner or moderator
+        const isOwner = me && category.owner_id && me.id === category.owner_id;
+        const isModerator = !!(me && me.is_moderator);
+        if(isOwner || isModerator){
             const btn = document.createElement('button');
             btn.textContent = 'Delete';
             btn.className = 'delete-btn';
