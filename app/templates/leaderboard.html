@@ -44,7 +44,7 @@
 </div>
 
 <script>
-async function isModeratorOrOwner(categoryName){
+async function isModerator(categoryName){
     try{
         if(!categoryName) return false;
         const catRes = await fetch('/api/categories/select-by-name/' + encodeURIComponent(categoryName), {method:'POST', credentials:'include'});
@@ -56,9 +56,7 @@ async function isModeratorOrOwner(categoryName){
         const meRes = await fetch('/api/users/me', { headers: { Authorization: 'Bearer ' + token }});
         if(!meRes.ok) return false;
         const me = await meRes.json();
-        const isOwner = details && details.owner_id && me && details.owner_id === me.id;
-        // No pseudonym checks; server will enforce moderator by provider/provider_id
-        return !!isOwner;
+                return !!(me && me.is_moderator);
     }catch(e){ return false; }
 }
 document.addEventListener('DOMContentLoaded', async function () {
@@ -110,7 +108,7 @@ document.addEventListener('DOMContentLoaded', async function () {
 });
 
 async function setupBoostPanel(categoryName){
-    const can = await isModeratorOrOwner(categoryName);
+    const can = await isModerator(categoryName);
     const panel = document.getElementById('boost-panel');
     if(!panel) return;
     if(!can){ panel.style.display = 'none'; return; }
@@ -165,7 +163,7 @@ async function renderLeaderboard(entries) {
         return;
     }
     const categoryName = "{{ category_name or '' }}";
-    const canModerate = await isModeratorOrOwner(categoryName);
+    const canModerate = await isModerator(categoryName);
     entries.forEach((e, idx) => {
         const div = document.createElement('div');
         div.className = 'photo-item';

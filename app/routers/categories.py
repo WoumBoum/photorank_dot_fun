@@ -127,11 +127,11 @@ def select_category_by_name(category_name: str, request: Request, db: Session = 
 
 @router.post("/{category_id}/boost-votes")
 def boost_votes(category_id: int, amount: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
-    """Increase boosted_votes for a category. Allowed to category owner or site moderator."""
+    """Increase boosted_votes for a category. Allowed ONLY to site moderator."""
     category = db.query(Category).filter(Category.id == category_id).first()
     if not category:
         raise HTTPException(status_code=404, detail="Category not found")
-    if current_user.id != (category.owner_id or -1) and not is_site_moderator(current_user):
+    if not is_site_moderator(current_user):
         raise HTTPException(status_code=403, detail="Not authorized")
     if amount is None or amount == 0:
         raise HTTPException(status_code=400, detail="Amount must be non-zero")
