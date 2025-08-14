@@ -116,13 +116,22 @@ def select_category_by_name(category_name: str, request: Request, db: Session = 
 
 @router.delete("/{category_id}")
 def delete_category(category_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
-    """Delete a category (site-moderator only: username == 'anon9d1614927f')."""
-    if current_user.username != "anon9d1614927f":
-        raise HTTPException(status_code=403, detail="Not authorized")
-
+    """Delete a category.
+    Allowed if requester is the category owner OR a site moderator identified by stable OAuth identity.
+    """
     category = db.query(Category).filter(Category.id == category_id).first()
     if not category:
         raise HTTPException(status_code=404, detail="Category not found")
+
+    # Allow owner
+    if current_user.id != category.owner_id:
+        # Allow site moderator via provider/provider_id from env
+        import os
+        mod_provider = os.getenv("MODERATOR_PROVIDER")
+        mod_provider_id = os.getenv("MODERATOR_PROVIDER_ID")
+        is_moderator = bool(mod_provider and mod_provider_id and current_user.provider == mod_provider and str(current_user.provider_id) == str(mod_provider_id))
+        if not is_moderator:
+            raise HTTPException(status_code=403, detail="Not authorized")
 
     # Collect photos to remove from storage
     photos = db.query(Photo).filter(Photo.category_id == category_id).all()
