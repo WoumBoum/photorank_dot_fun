@@ -175,12 +175,54 @@ function displayCategories(categories) {
                 <td>${leaderInfo}</td>
             `;
             
+            // Add delete button cell for moderator pseudonym
+            const tdDelete = document.createElement('td');
+            tdDelete.style.width = '120px';
+            tdDelete.style.textAlign = 'right';
+            tdDelete.addEventListener('click', e => e.stopPropagation());
+            row.appendChild(tdDelete);
+
+            maybeAddDeleteButton(tdDelete, category);
+
             tbody.appendChild(row);
         });
     }
     
     loading.style.display = 'none';
     table.style.display = 'block';
+}
+
+async function maybeAddDeleteButton(cell, category){
+    try{
+        const token = localStorage.getItem('token');
+        if(!token) return;
+        const meRes = await fetch('/api/users/me', { headers: { Authorization: 'Bearer ' + token }});
+        if(!meRes.ok) return;
+        const me = await meRes.json();
+        if(me && me.username === 'anon9d1614927f'){
+            const btn = document.createElement('button');
+            btn.textContent = 'Delete';
+            btn.className = 'delete-btn';
+            btn.onclick = async () => {
+                if(!confirm(`Delete category "${category.name}"? This will remove all its photos and votes.`)) return;
+                try{
+                    const res = await fetch(`/api/categories/${category.id}` , {
+                        method: 'DELETE',
+                        headers: { Authorization: 'Bearer ' + token }
+                    });
+                    if(res.ok){
+                        // Remove the row
+                        const tr = cell.closest('tr');
+                        if(tr) tr.remove();
+                    }else{
+                        const d = await res.json().catch(()=>({detail:'Failed'}));
+                        alert(d.detail || 'Failed to delete category');
+                    }
+                }catch(err){ alert('Error deleting category'); }
+            };
+            cell.appendChild(btn);
+        }
+    }catch(e){ /* ignore */ }
 }
 
 async function selectCategory(categoryId) {

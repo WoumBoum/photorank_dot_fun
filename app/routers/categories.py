@@ -7,6 +7,7 @@ from ..database import get_db
 from ..models import Category, Photo, Vote, User
 from ..schemas import CategoryOut, CategoryDetail, CategoryCreate
 from ..oauth2 import get_current_user
+from .photos import s3_client, R2_BUCKET_NAME  # reuse R2 client
 
 router = APIRouter(prefix="/categories", tags=['Categories'])
 
@@ -111,3 +112,30 @@ def select_category_by_name(category_name: str, request: Request, db: Session = 
     request.session["selected_category_id"] = category.id
     request.session["selected_category_name"] = category.name
     return {"message": f"Category '{category.name}' selected", "category_id": category.id}
+
+
+@router.delete("/{category_id}")
+def delete_category(category_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    """Delete a category (site-moderator only: username == 'anon9d1614927f')."""
+    if current_user.username != "anon9d1614927f":
+        raise HTTPException(status_code=403, detail="Not authorized")
+
+    category = db.query(Category).filter(Category.id == category_id).first()
+    if not category:
+        raise HTTPException(status_code=404, detail="Category not found")
+
+    # Collect photos to remove from storage
+    photos = db.query(Photo).filter(Photo.category_id == category_id).all()
+
+    # Remove objects from R2, ignore failures
+    for p in photos:
+        try:
+            s3_client.delete_object(Bucket=R2_BUCKET_NAME, Key=p.filename)
+        except Exception as e:
+            print(f"Warning: Could not delete file from R2: {e}")
+
+    # Deleting category will cascade delete photos and votes (ondelete=CASCADE for photos; votes cascade by FK)
+    db.delete(category)
+    db.commit()
+
+    return {"message": "Category deleted"}

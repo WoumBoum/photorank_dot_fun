@@ -38,7 +38,27 @@
             const mine = cats.filter(c=>c.owner_id===me.id);
             const container = document.getElementById('your-categories');
             if(!mine.length){container.textContent='No categories yet.';return;}
-            container.innerHTML = mine.map(c=>`<div><a href="/${encodeURIComponent(c.name)}/leaderboard">${c.name}</a> — ${c.question}</div>`).join('');
+            container.innerHTML = mine.map(c=>`<div style="display:flex;align-items:center;gap:8px;margin:6px 0;">
+                <a href="/${encodeURIComponent(c.name)}/leaderboard" style="flex:1 1 auto;">${c.name}</a>
+                <span style="flex:2 1 auto; color:#666; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${c.question}</span>
+                <button class="delete-btn" data-category-id="${c.id}">Delete</button>
+            </div>`).join('');
+
+            // Wire deletion for category owners
+            container.querySelectorAll('button.delete-btn').forEach(btn=>{
+              btn.addEventListener('click', async (ev)=>{
+                ev.preventDefault();
+                ev.stopPropagation();
+                const id = btn.getAttribute('data-category-id');
+                const name = btn.parentElement?.querySelector('a')?.textContent || 'this category';
+                if(!confirm(`Delete category "${name}"? This will remove all its photos and votes.`)) return;
+                try{
+                  const res = await fetch(`/api/categories/${id}`, { method:'DELETE', headers:{'Authorization':'Bearer '+token}});
+                  if(res.ok){ btn.parentElement?.remove(); }
+                  else{ const d = await res.json().catch(()=>({detail:'Failed'})); alert(d.detail || 'Delete failed'); }
+                }catch(e){ alert('Error deleting category'); }
+              });
+            });
           }catch(e){console.error(e);}
         });
         </script>

@@ -119,7 +119,7 @@ async function renderLeaderboard(entries) {
                 <span>${crown}${Math.round(e.elo_rating)}</span>
                 <span>${e.owner_username}</span>
             </div>
-            ${canModerate ? `<button class="btn-delete" data-photo-id="${e.id}">Delete</button>` : ''}
+            ${canModerate ? `<button class=\"delete-btn\" data-photo-id=\"${e.id}\">Delete</button>` : ''}
         `;
         if(canModerate){
             const btn = div.querySelector('.btn-delete');
