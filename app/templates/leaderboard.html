@@ -66,7 +66,9 @@ document.addEventListener('DOMContentLoaded', async function () {
         }
     }
 
-    loadLeaderboard(categoryName);
+    if (!window.PhotoRankApp) {
+        loadLeaderboard(categoryName);
+    }
 });
 
 async function loadLeaderboard(categoryName) {
@@ -122,22 +124,24 @@ async function renderLeaderboard(entries) {
             ${canModerate ? `<button class=\"delete-btn\" data-photo-id=\"${e.id}\">Delete</button>` : ''}
         `;
         if(canModerate){
-            const btn = div.querySelector('.btn-delete');
-            btn.addEventListener('click', async () => {
-                if(!confirm('Delete this photo?')) return;
-                try{
-                    const token = localStorage.getItem('token');
-                    if(!token){ alert('Login required'); return; }
-                    const catName = categoryName;
-                    const catSel = await (await fetch('/api/categories/select-by-name/' + encodeURIComponent(catName), {method:'POST', credentials:'include'})).json();
-                    const res = await fetch(`/api/photos/categories/${catSel.category_id}/photos/${e.id}` , {
-                        method: 'DELETE',
-                        headers: { Authorization: 'Bearer ' + token }
-                    });
-                    if(res.ok){ div.remove(); }
-                    else{ const d = await res.json().catch(()=>({detail:'Failed'})); alert(d.detail || 'Failed to delete'); }
-                }catch(err){ alert('Error deleting'); }
-            });
+            const btn = div.querySelector('.delete-btn');
+            if (btn) {
+                btn.addEventListener('click', async () => {
+                    if(!confirm('Delete this photo?')) return;
+                    try{
+                        const token = localStorage.getItem('token');
+                        if(!token){ alert('Login required'); return; }
+                        const catName = categoryName;
+                        const catSel = await (await fetch('/api/categories/select-by-name/' + encodeURIComponent(catName), {method:'POST', credentials:'include'})).json();
+                        const res = await fetch(`/api/photos/categories/${catSel.category_id}/photos/${e.id}` , {
+                            method: 'DELETE',
+                            headers: { Authorization: 'Bearer ' + token }
+                        });
+                        if(res.ok){ div.remove(); }
+                        else{ const d = await res.json().catch(()=>({detail:'Failed'})); alert(d.detail || 'Failed to delete'); }
+                    }catch(err){ alert('Error deleting'); }
+                });
+            }
         }
         grid.appendChild(div);
     });
