@@ -701,6 +701,9 @@ window.updateToggleButton = function(theme) {
 
 // Initialize app when DOM is loaded
 document.addEventListener('DOMContentLoaded', () => {
-    new PhotoRankApp();
+    // Only initialize the SPA on pages that opt-in
+    if (document.querySelector('[data-init-app]')) {
+        new PhotoRankApp();
+    }
     initThemeToggle();
 });
