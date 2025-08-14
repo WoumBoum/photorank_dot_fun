@@ -5,7 +5,7 @@ An ultra-minimalist photo ranking application that uses the ELO rating system to
 ## Features
 
 - **ELO Ranking System**: Photos ranked using proven ELO algorithm (K=32)
-- **Direct Comparison Voting**: Users vote between two photos at a time
+- **Direct Comparison Voting**: Users vote between two photos at a time (click or use Left/Right arrow keys)
 - **Rate Limiting**: 5 uploads per user per 24 hours
 - **Photo Management**: Upload, view, and delete your own photos
 - **Leaderboard**: Top 100 photos with crown icons for top 3 (≥50 duels required)
@@ -33,6 +33,12 @@ docker compose -f docker-compose-dev.yml up -d
 ```
 
 Visit: http://localhost:9001
+
+### Keyboard Shortcuts
+- Left Arrow: vote for the left photo
+- Right Arrow: vote for the right photo
+
+Note: Shortcuts are disabled while typing in inputs/selects and won’t scroll the page.
 
 ### Manual Setup
 ```bash

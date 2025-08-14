@@ -116,6 +116,30 @@ class PhotoRankApp {
     }
 
     setupEventListeners() {
+        // Keyboard voting (left/right arrows)
+        document.addEventListener('keydown', (e) => {
+            // Ignore when typing in inputs/textareas or if no pair loaded
+            const tag = (e.target && e.target.tagName) ? e.target.tagName.toLowerCase() : '';
+            if (tag === 'input' || tag === 'textarea' || tag === 'select' || !this.currentPair) return;
+
+            if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+                e.preventDefault();
+                // Debounce rapid repeats while a vote is being processed by disabling during fade
+                if (this._keyboardVotingLocked) return;
+                this._keyboardVotingLocked = true;
+
+                const container = document.getElementById(e.key === 'ArrowLeft' ? 'photo1' : 'photo2');
+                if (container) {
+                    // Synthesize an event compatible with handleVote
+                    const clickLikeEvent = { currentTarget: container };
+                    this.handleVote(clickLikeEvent);
+                    // Release lock after next pair loads slightly after fade
+                    setTimeout(() => { this._keyboardVotingLocked = false; }, 350);
+                } else {
+                    this._keyboardVotingLocked = false;
+                }
+            }
+        });
         // Photo voting
         document.querySelectorAll('.photo-container').forEach(container => {
             container.addEventListener('click', (e) => this.handleVote(e));
