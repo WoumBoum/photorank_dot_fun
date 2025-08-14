@@ -16,7 +16,6 @@ class User(Base):
     provider_id = Column(String, nullable=False, unique=True)
     created_at = Column(TIMESTAMP(timezone=True),
                         nullable=False, server_default=text('now()'))
-    boosted_votes = Column(Integer, nullable=False, default=0)
 
 
 
