@@ -27,7 +27,9 @@ class Settings(BaseSettings):
     # Frontend base URL used for CORS/redirects
     frontend_url: str = "http://localhost:9001"
 
-    model_config = SettingsConfigDict(env_file=".env", extra="ignore")
+    class Config:
+        env_file = ".env"
+        case_sensitive = False
 
 
 settings = Settings()
