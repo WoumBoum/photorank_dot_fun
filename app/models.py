@@ -19,18 +19,6 @@ class User(Base):
     boosted_votes = Column(Integer, nullable=False, default=0)
 
 
-class Category(Base):
-    __tablename__ = "categories"
-
-    id = Column(Integer, primary_key=True, nullable=False)
-    name = Column(String, nullable=False, unique=True)
-    description = Column(String, nullable=True)
-    question = Column(Text, nullable=False)
-    owner_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
-    created_at = Column(TIMESTAMP(timezone=True),
-                        nullable=False, server_default=text('now()'))
-    boosted_votes = Column(Integer, nullable=False, default=0)
-
 
 class Photo(Base):
     __tablename__ = "photos"
@@ -42,7 +30,6 @@ class Photo(Base):
     wins = Column(Integer, nullable=False, default=0)
     created_at = Column(TIMESTAMP(timezone=True),
                         nullable=False, server_default=text('now()'))
-    boosted_votes = Column(Integer, nullable=False, default=0)
     owner_id = Column(Integer, ForeignKey(
         "users.id", ondelete="CASCADE"), nullable=False)
     category_id = Column(Integer, ForeignKey(
@@ -61,7 +48,6 @@ class Vote(Base):
         "photos.id", ondelete="CASCADE"), nullable=False)
     created_at = Column(TIMESTAMP(timezone=True),
                         nullable=False, server_default=text('now()'))
-    boosted_votes = Column(Integer, nullable=False, default=0)
 
 
 class UploadLimit(Base):
