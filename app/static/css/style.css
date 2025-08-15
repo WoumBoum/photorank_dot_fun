@@ -209,13 +209,13 @@ nav {
     height: 100%;
 }
 
-/* Leaderboard image sizing aligned with stats */
+/* Leaderboard square image box */
 .photo-card img {
     display: block;
     width: 100%;
+    aspect-ratio: 1 / 1; /* perfect square */
     height: auto;
-    max-height: 300px; /* match stats visual box */
-    object-fit: contain;
+    object-fit: contain; /* letterbox inside square */
     margin-bottom: auto;
     border: 1px solid var(--border-color);
 }
@@ -231,12 +231,12 @@ nav {
     margin-top: 0.25rem;
 }
 
-/* Leaderboard image sizing aligned with stats */
+/* Leaderboard square image box duplicate rule kept consistent */
 .photo-card img {
     display: block;
     width: 100%;
+    aspect-ratio: 1 / 1; /* perfect square */
     height: auto;
-    max-height: 300px; /* match stats visual box */
     object-fit: contain;
     margin-bottom: auto;
 }
