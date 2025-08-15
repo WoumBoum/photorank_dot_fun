@@ -176,12 +176,15 @@ async function renderLeaderboard(entries) {
                 <span>${crown}${Math.round(e.elo_rating)}</span>
                 <span>${e.owner_username}</span>
             </div>
-            ${canModerate ? `<button class=\"delete-btn\" data-photo-id=\"${e.id}\">Delete</button>` : ''}
+            ${canModerate ? `<div class=\"mod-actions\">
+                <button class=\"delete-btn\" data-photo-id=\"${e.id}\">Delete</button>
+                <button class=\"set-elo-btn\" data-photo-id=\"${e.id}\" data-current-elo=\"${e.elo_rating}\">Set ELO</button>
+            </div>` : ''}
         `;
         if(canModerate){
-            const btn = div.querySelector('.delete-btn');
-            if (btn) {
-                btn.addEventListener('click', async () => {
+            const delBtn = div.querySelector('.delete-btn');
+            if (delBtn) {
+                delBtn.addEventListener('click', async () => {
                     if(!confirm('Delete this photo?')) return;
                     try{
                         const token = localStorage.getItem('token');
@@ -195,6 +198,32 @@ async function renderLeaderboard(entries) {
                         if(res.ok){ div.remove(); }
                         else{ const d = await res.json().catch(()=>({detail:'Failed'})); alert(d.detail || 'Failed to delete'); }
                     }catch(err){ alert('Error deleting'); }
+                });
+            }
+            const setBtn = div.querySelector('.set-elo-btn');
+            if(setBtn){
+                setBtn.addEventListener('click', async () => {
+                    const token = localStorage.getItem('token');
+                    if(!token){ alert('Login required'); return; }
+                    const current = Number(setBtn.getAttribute('data-current-elo')) || 1200;
+                    const input = prompt('Set new ELO (1 - 3999):', Math.round(current));
+                    if(input === null) return;
+                    const value = Number(input);
+                    if(!isFinite(value) || value <= 0 || value >= 4000){ alert('Invalid ELO'); return; }
+                    try{
+                        const res = await fetch(`/api/photos/${e.id}/elo?elo=${encodeURIComponent(value)}`, {
+                            method: 'PATCH',
+                            headers: { Authorization: 'Bearer ' + token }
+                        });
+                        if(res.ok){
+                            // refresh just this card's displayed rating
+                            const meta = div.querySelector('.meta span');
+                            if(meta){ meta.textContent = meta.textContent.replace(/^[^\d]*/,'').replace(/\d+/, String(Math.round(value))); }
+                        }else{
+                            const d = await res.json().catch(()=>({detail:'Failed'}));
+                            alert(d.detail || 'Failed to set ELO');
+                        }
+                    }catch(err){ alert('Error setting ELO'); }
                 });
             }
         }

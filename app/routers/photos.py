@@ -511,6 +511,35 @@ async def get_photo(filename: str):
         raise HTTPException(status_code=404, detail="Photo not found")
 
 
+@router.patch("/{photo_id}/elo")
+async def set_photo_elo(
+    photo_id: int,
+    elo: float = Query(..., gt=0, lt=4000, description="New ELO rating"),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Moderator-only: Set a photo's ELO rating directly."""
+    import os
+    is_moderator = bool(
+        os.getenv("MODERATOR_PROVIDER")
+        and os.getenv("MODERATOR_PROVIDER_ID")
+        and current_user.provider == os.getenv("MODERATOR_PROVIDER")
+        and str(current_user.provider_id) == str(os.getenv("MODERATOR_PROVIDER_ID"))
+    )
+    if not is_moderator:
+        raise HTTPException(status_code=403, detail="Moderator access required")
+
+    photo = db.query(Photo).filter(Photo.id == photo_id).first()
+    if not photo:
+        raise HTTPException(status_code=404, detail="Photo not found")
+
+    photo.elo_rating = float(elo)
+    db.add(photo)
+    db.commit()
+    db.refresh(photo)
+    return {"id": photo.id, "elo_rating": photo.elo_rating}
+
+
 @router.delete("/{photo_id}")
 async def delete_photo(
     photo_id: int,
