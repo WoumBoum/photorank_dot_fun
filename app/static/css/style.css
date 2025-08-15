@@ -160,15 +160,7 @@ nav {
     margin: 0 auto;
 }
 
-/* Make leaderboard images behave like stats */
-.photo-item .photo img {
-    display: block;
-    width: 100%;
-    height: auto;
-    max-height: 300px; /* match stats visual box */
-    object-fit: contain;
-    border: 1px solid var(--border-color);
-}
+/* (removed old leaderboard image sizing to prevent override) */
 
 .leaderboard h2 {
     text-align: center;
@@ -231,7 +223,7 @@ nav {
     margin-top: 0.25rem;
 }
 
-/* Leaderboard square image box duplicate rule kept consistent */
+/* Leaderboard square image box (single source of truth) */
 .photo-card img {
     display: block;
     width: 100%;
