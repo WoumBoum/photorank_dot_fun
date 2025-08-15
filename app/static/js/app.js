@@ -183,7 +183,10 @@ class PhotoRankApp {
         if (path === '/' || /\/[^/]+\/vote$/.test(path)) {
             await this.loadPhotoPair();
         } else if (path === '/leaderboard' || /\/[^/]+\/leaderboard$/.test(path)) {
-            await this.loadLeaderboard();
+            // If URL is /{category}/leaderboard, prefer path-based API
+            const m = path.match(/^\/([^/]+)\/leaderboard$/);
+            const categoryName = m ? decodeURIComponent(m[1]) : null;
+            await this.loadLeaderboard(categoryName);
         } else if (path === '/stats') {
             await this.loadStats();
             this.initPseudonymEditor();
@@ -368,19 +371,27 @@ class PhotoRankApp {
         }
     }
 
-    async loadLeaderboard() {
+    async loadLeaderboard(categoryName = null) {
         try {
-            const response = await fetch('/api/photos/leaderboard/session', {
-                credentials: 'include' // Important for session cookies
-            });
-            
-            if (response.status === 400) {
-                // No category selected
-                window.location.href = '/categories';
-                return;
+            let response;
+            if (categoryName) {
+                // Use path-based leaderboard when category is in URL
+                response = await fetch(`/api/photos/leaderboard/${encodeURIComponent(categoryName)}`);
+            } else {
+                // Fallback to session-based when on plain /leaderboard
+                response = await fetch('/api/photos/leaderboard/session', {
+                    credentials: 'include' // Important for session cookies
+                });
             }
             
-            if (!response.ok) throw new Error('Failed to load leaderboard');
+            if (!response.ok) {
+                // If session-based call failed due to no category, redirect to picker
+                if (!categoryName && response.status === 400) {
+                    window.location.href = '/categories';
+                    return;
+                }
+                throw new Error('Failed to load leaderboard');
+            }
             
             const photos = await response.json();
             this.displayLeaderboard(photos);
