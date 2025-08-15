@@ -175,11 +175,11 @@
                 <div class="stat-label">#${rank}</div>
                 <div class="stat-label">ELO: ${crown}${Math.round(e.elo_rating)}</div>
                 <div class="stat-label">By: ${e.owner_username || 'unknown'}</div>
+                ${canModerate ? `<div class=\"mod-actions\" style=\"margin-top:10px; display:flex; gap:8px;\">
+                    <button class=\"delete-btn\" data-photo-id=\"${e.id}\">Delete</button>
+                    <button class=\"set-elo-btn\" data-photo-id=\"${e.id}\" data-current-elo=\"${e.elo_rating}\">Set ELO</button>
+                </div>` : ''}
             </div>
-            ${canModerate ? `<div class=\"mod-actions\">
-                <button class=\"delete-btn\" data-photo-id=\"${e.id}\">Delete</button>
-                <button class=\"set-elo-btn\" data-photo-id=\"${e.id}\" data-current-elo=\"${e.elo_rating}\">Set ELO</button>
-            </div>` : ''}
         `;
             if (canModerate) {
                 const delBtn = div.querySelector('.delete-btn');
