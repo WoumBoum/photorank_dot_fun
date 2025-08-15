@@ -18,7 +18,8 @@ GITHUB_CLIENT_SECRET = os.getenv("GITHUB_CLIENT_SECRET", "your_github_client_sec
 GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID", "your_google_client_id")
 GOOGLE_CLIENT_SECRET = os.getenv("GOOGLE_CLIENT_SECRET", "your_google_client_secret")
 
-FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:9001")
+from ..config import settings
+FRONTEND_URL = os.getenv("FRONTEND_URL", settings.frontend_url)
 
 
 @router.get("/login/github")

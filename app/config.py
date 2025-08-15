@@ -25,7 +25,7 @@ class Settings(BaseSettings):
     github_client_secret: str = "dummy-github-client-secret"
 
     # Frontend base URL used for CORS/redirects
-    frontend_url: str = "http://localhost:9001"
+    frontend_url: str = __import__("os").getenv("FRONTEND_URL", "http://localhost:9001")
 
     class Config:
         env_file = ".env"
