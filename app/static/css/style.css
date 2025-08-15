@@ -188,8 +188,8 @@ nav {
 
 .photo-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-    gap: 1rem;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); /* mirror stats-grid */
+    gap: 2rem; /* mirror stats-grid spacing */
     align-items: stretch;
 }
 
@@ -201,15 +201,14 @@ nav {
     height: 100%;
 }
 
-/* Leaderboard square image box */
+/* Leaderboard card */
 .photo-card img {
     display: block;
     width: 100%;
-    aspect-ratio: 1 / 1; /* perfect square */
-    height: auto;
-    object-fit: contain; /* letterbox inside square */
-    margin-bottom: auto;
+    height: 300px; /* align with stats image height */
+    object-fit: contain;
     border: 1px solid var(--border-color);
+    margin-bottom: auto;
 }
 
 .photo-card .elo {
@@ -223,32 +222,13 @@ nav {
     margin-top: 0.25rem;
 }
 
-/* Leaderboard square image box (single source of truth) */
-.photo-card img {
-    display: block;
-    width: 100%;
-    aspect-ratio: 1 / 1; /* perfect square */
-    height: auto;
-    object-fit: contain;
-    margin-bottom: auto;
-}
-
 .photo-card .rank {
     font-size: 1.2rem;
     font-weight: 700;
     margin-bottom: 0.25rem;
 }
 
-.photo-card .elo {
-    font-size: 0.9rem;
-    color: #666;
-}
-
-.photo-card .uploader {
-    font-size: 0.8rem;
-    color: #888;
-    margin-top: 0.25rem;
-}
+/* remove duplicate differing color definitions to keep coherence */
 
 .crown {
     font-size: 1rem;
@@ -471,7 +451,9 @@ nav {
     }
     
     .photo-card img {
-        max-height: 300px;
+        aspect-ratio: 1 / 1;
+        height: auto;
+        max-height: none;
     }
     
     header {
