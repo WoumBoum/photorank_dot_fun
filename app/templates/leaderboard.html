@@ -19,14 +19,14 @@
         <div id="category-vote-count" style="margin-top:6px;color:#666;font-size:0.95em;"></div>
         <div class="current-category">
             {% if category_name %}
-                <span>Category: <strong>{{ category_name }}</strong></span>
-                <a href="/categories" style="margin-left: 10px; font-size: 0.9em;">All Categories</a>
+            <span>Category: <strong>{{ category_name }}</strong></span>
+            <a href="/categories" style="margin-left: 10px; font-size: 0.9em;">All Categories</a>
             {% elif selected_category_name %}
-                <span>Showing: <strong>{{ selected_category_name }}</strong></span>
-                <a href="/categories" style="margin-left: 10px; font-size: 0.9em;">Change Category</a>
+            <span>Showing: <strong>{{ selected_category_name }}</strong></span>
+            <a href="/categories" style="margin-left: 10px; font-size: 0.9em;">Change Category</a>
             {% else %}
-                <span>No category selected</span>
-                <a href="/categories" style="margin-left: 10px; font-size: 0.9em;">Select Category</a>
+            <span>No category selected</span>
+            <a href="/categories" style="margin-left: 10px; font-size: 0.9em;">Select Category</a>
             {% endif %}
         </div>
         <div class="photo-grid" id="leaderboard-grid">
@@ -44,191 +44,191 @@
 </div>
 
 <script>
-async function isModerator(categoryName){
-    try{
-        if(!categoryName) return false;
-        const catRes = await fetch('/api/categories/select-by-name/' + encodeURIComponent(categoryName), {method:'POST', credentials:'include'});
-        if(!catRes.ok) return false;
-        const cat = await catRes.json();
-        const details = await (await fetch('/api/categories/' + cat.category_id)).json();
-        const token = localStorage.getItem('token');
-        if(!token) return false;
-        const meRes = await fetch('/api/users/me', { headers: { Authorization: 'Bearer ' + token }});
-        if(!meRes.ok) return false;
-        const me = await meRes.json();
-                return !!(me && me.is_moderator);
-    }catch(e){ return false; }
-}
-document.addEventListener('DOMContentLoaded', async function () {
-    const categoryName = "{{ category_name or '' }}";
-
-    if (categoryName) {
-        setupBoostPanel(categoryName);
+    async function isModerator(categoryName) {
         try {
-            const cat = await (await fetch('/api/categories/select-by-name/' + encodeURIComponent(categoryName), { method: 'POST', credentials: 'include' })).json();
-            // Load category details for vote count
-            try {
-                const detailsList = await (await fetch('/api/categories/details?t=' + Date.now())).json();
-                const det = detailsList.find(x => x.name === categoryName);
-                if (det && typeof det.total_votes !== 'undefined') {
-                    const el = document.getElementById('category-vote-count');
-                    if (el) el.textContent = `ranking based on ${det.total_votes} votes`;
-                }
-            } catch(e) { /* ignore */ }
-            const catData = await (await fetch('/api/categories/' + cat.category_id)).json();
-            if (catData && catData.question) document.getElementById('category-question').textContent = `Results of: ${catData.question}`;
-        } catch (e) { console.error('failed to fetch category question', e); }
-        // Ensure session uses this category
-        try {
-            await fetch(`/api/categories/select-by-name/${encodeURIComponent(categoryName)}`, {
-                method: 'POST',
-                credentials: 'include'
-            });
-        } catch (e) { console.error('select-by-name failed', e); }
-
-        // Rewrite top nav links to category-prefixed paths
-        const nav = document.querySelector('header nav');
-        if (nav) {
-            const links = Array.from(nav.querySelectorAll('a'));
-            const relink = (text, leaf) => {
-                const a = links.find(x => x.textContent.trim() === text);
-                if (a) a.href = `/${encodeURIComponent(categoryName)}/${leaf}`;
-            };
-            relink('Vote', 'vote');
-            relink('Upload', 'upload');
-            relink('Leaderboard', 'leaderboard');
-        }
-
-        // After category is set in session, load data using by-name endpoint
-        await loadLeaderboard(categoryName);
-    } else {
-        // No category specified, load global leaderboard
-        await loadLeaderboard(null);
-    }
-});
-
-async function setupBoostPanel(categoryName){
-    const can = await isModerator(categoryName);
-    const panel = document.getElementById('boost-panel');
-    if(!panel) return;
-    if(!can){ panel.style.display = 'none'; return; }
-    panel.style.display = 'block';
-    const btn = document.getElementById('boost-apply');
-    const amt = document.getElementById('boost-amount');
-    const status = document.getElementById('boost-status');
-    btn.onclick = async ()=>{
-        const n = parseInt(amt.value, 10) || 0;
-        if(n === 0){ status.textContent = 'enter a non-zero number'; return; }
-        try{
-            const catSel = await (await fetch('/api/categories/select-by-name/' + encodeURIComponent(categoryName), {method:'POST', credentials:'include'})).json();
+            if (!categoryName) return false;
+            const catRes = await fetch('/api/categories/select-by-name/' + encodeURIComponent(categoryName), { method: 'POST', credentials: 'include' });
+            if (!catRes.ok) return false;
+            const cat = await catRes.json();
+            const details = await (await fetch('/api/categories/' + cat.category_id)).json();
             const token = localStorage.getItem('token');
-            const res = await fetch(`/api/categories/${catSel.category_id}/boost-votes?amount=${encodeURIComponent(n)}`, { method:'POST', headers: { Authorization: 'Bearer ' + token }});
-            if(res.ok){
-                status.textContent = 'applied';
-                // Refresh details for updated total
-                const detailsList = await (await fetch('/api/categories/details?t=' + Date.now())).json();
-                const det = detailsList.find(x => x.name === categoryName);
-                if (det && typeof det.total_votes !== 'undefined') {
-                    const el = document.getElementById('category-vote-count');
-                    if (el) el.textContent = `ranking based on ${det.total_votes} votes`;
-                }
-            }else{
-                const d = await res.json().catch(()=>({detail:'failed'}));
-                status.textContent = d.detail || 'failed';
-            }
-        }catch(e){ status.textContent = 'error'; }
-    };
-}
+            if (!token) return false;
+            const meRes = await fetch('/api/users/me', { headers: { Authorization: 'Bearer ' + token } });
+            if (!meRes.ok) return false;
+            const me = await meRes.json();
+            return !!(me && me.is_moderator);
+        } catch (e) { return false; }
+    }
+    document.addEventListener('DOMContentLoaded', async function () {
+        const categoryName = "{{ category_name or '' }}";
 
-async function loadLeaderboard(categoryName) {
-    try {
-        let url = '/api/photos/leaderboard';
-        if (categoryName) url = `/api/photos/leaderboard/${encodeURIComponent(categoryName)}`;
-        const res = await fetch(url + '?t=' + Date.now());
-        if (!res.ok) throw new Error('Failed to load leaderboard');
-        const data = await res.json();
-        await renderLeaderboard(data);
-    } catch (e) {
-        console.error('Error loading leaderboard:', e);
+        if (categoryName) {
+            setupBoostPanel(categoryName);
+            try {
+                const cat = await (await fetch('/api/categories/select-by-name/' + encodeURIComponent(categoryName), { method: 'POST', credentials: 'include' })).json();
+                // Load category details for vote count
+                try {
+                    const detailsList = await (await fetch('/api/categories/details?t=' + Date.now())).json();
+                    const det = detailsList.find(x => x.name === categoryName);
+                    if (det && typeof det.total_votes !== 'undefined') {
+                        const el = document.getElementById('category-vote-count');
+                        if (el) el.textContent = `ranking based on ${det.total_votes} votes`;
+                    }
+                } catch (e) { /* ignore */ }
+                const catData = await (await fetch('/api/categories/' + cat.category_id)).json();
+                if (catData && catData.question) document.getElementById('category-question').textContent = `Results of: ${catData.question}`;
+            } catch (e) { console.error('failed to fetch category question', e); }
+            // Ensure session uses this category
+            try {
+                await fetch(`/api/categories/select-by-name/${encodeURIComponent(categoryName)}`, {
+                    method: 'POST',
+                    credentials: 'include'
+                });
+            } catch (e) { console.error('select-by-name failed', e); }
+
+            // Rewrite top nav links to category-prefixed paths
+            const nav = document.querySelector('header nav');
+            if (nav) {
+                const links = Array.from(nav.querySelectorAll('a'));
+                const relink = (text, leaf) => {
+                    const a = links.find(x => x.textContent.trim() === text);
+                    if (a) a.href = `/${encodeURIComponent(categoryName)}/${leaf}`;
+                };
+                relink('Vote', 'vote');
+                relink('Upload', 'upload');
+                relink('Leaderboard', 'leaderboard');
+            }
+
+            // After category is set in session, load data using by-name endpoint
+            await loadLeaderboard(categoryName);
+        } else {
+            // No category specified, load global leaderboard
+            await loadLeaderboard(null);
+        }
+    });
+
+    async function setupBoostPanel(categoryName) {
+        const can = await isModerator(categoryName);
+        const panel = document.getElementById('boost-panel');
+        if (!panel) return;
+        if (!can) { panel.style.display = 'none'; return; }
+        panel.style.display = 'block';
+        const btn = document.getElementById('boost-apply');
+        const amt = document.getElementById('boost-amount');
+        const status = document.getElementById('boost-status');
+        btn.onclick = async () => {
+            const n = parseInt(amt.value, 10) || 0;
+            if (n === 0) { status.textContent = 'enter a non-zero number'; return; }
+            try {
+                const catSel = await (await fetch('/api/categories/select-by-name/' + encodeURIComponent(categoryName), { method: 'POST', credentials: 'include' })).json();
+                const token = localStorage.getItem('token');
+                const res = await fetch(`/api/categories/${catSel.category_id}/boost-votes?amount=${encodeURIComponent(n)}`, { method: 'POST', headers: { Authorization: 'Bearer ' + token } });
+                if (res.ok) {
+                    status.textContent = 'applied';
+                    // Refresh details for updated total
+                    const detailsList = await (await fetch('/api/categories/details?t=' + Date.now())).json();
+                    const det = detailsList.find(x => x.name === categoryName);
+                    if (det && typeof det.total_votes !== 'undefined') {
+                        const el = document.getElementById('category-vote-count');
+                        if (el) el.textContent = `ranking based on ${det.total_votes} votes`;
+                    }
+                } else {
+                    const d = await res.json().catch(() => ({ detail: 'failed' }));
+                    status.textContent = d.detail || 'failed';
+                }
+            } catch (e) { status.textContent = 'error'; }
+        };
+    }
+
+    async function loadLeaderboard(categoryName) {
+        try {
+            let url = '/api/photos/leaderboard';
+            if (categoryName) url = `/api/photos/leaderboard/${encodeURIComponent(categoryName)}`;
+            const res = await fetch(url + '?t=' + Date.now());
+            if (!res.ok) throw new Error('Failed to load leaderboard');
+            const data = await res.json();
+            await renderLeaderboard(data);
+        } catch (e) {
+            console.error('Error loading leaderboard:', e);
+            const grid = document.getElementById('leaderboard-grid');
+            if (grid) grid.innerHTML = '<div style="padding:20px;color:#666;">Failed to load.</div>';
+        }
+    }
+
+    async function renderLeaderboard(entries) {
         const grid = document.getElementById('leaderboard-grid');
-        if (grid) grid.innerHTML = '<div style="padding:20px;color:#666;">Failed to load.</div>';
-    }
-}
- 
-async function renderLeaderboard(entries) {
-    const grid = document.getElementById('leaderboard-grid');
-    grid.innerHTML = '';
-    if (!entries.length) {
-        grid.innerHTML = '<div style="padding:20px;color:#666;">No eligible photos yet.</div>';
-        return;
-    }
-    const categoryName = "{{ category_name or '' }}";
-    const canModerate = await isModerator(categoryName);
-    entries.forEach((e, idx) => {
-        const div = document.createElement('div');
-        div.className = 'photo-item';
-        const crown = idx === 0 ? '👑 ' : '';
-        div.innerHTML = `
+        grid.innerHTML = '';
+        if (!entries.length) {
+            grid.innerHTML = '<div style="padding:20px;color:#666;">No eligible photos yet.</div>';
+            return;
+        }
+        const categoryName = "{{ category_name or '' }}";
+        const canModerate = await isModerator(categoryName);
+        entries.forEach((e, idx) => {
+            const div = document.createElement('div');
+            div.className = 'photo-item';
+            const crown = idx === 0 ? '👑 ' : '';
+            const rank = idx + 1;
+            div.innerHTML = `
             <div class="stat-card">
                 <img src="/api/photos/${e.filename}" alt="${e.filename}" />
-            </div>
-            <div class="meta">
-                <span>${crown}${Math.round(e.elo_rating)}</span>
-                <span>${e.owner_username}</span>
+                <div class="stat-label">#${rank}</div>
+                <div class="stat-label">ELO: ${crown}${Math.round(e.elo_rating)}</div>
+                <div class="stat-label">By: ${e.owner_username || 'unknown'}</div>
             </div>
             ${canModerate ? `<div class=\"mod-actions\">
                 <button class=\"delete-btn\" data-photo-id=\"${e.id}\">Delete</button>
                 <button class=\"set-elo-btn\" data-photo-id=\"${e.id}\" data-current-elo=\"${e.elo_rating}\">Set ELO</button>
             </div>` : ''}
         `;
-        if(canModerate){
-            const delBtn = div.querySelector('.delete-btn');
-            if (delBtn) {
-                delBtn.addEventListener('click', async () => {
-                    if(!confirm('Delete this photo?')) return;
-                    try{
+            if (canModerate) {
+                const delBtn = div.querySelector('.delete-btn');
+                if (delBtn) {
+                    delBtn.addEventListener('click', async () => {
+                        if (!confirm('Delete this photo?')) return;
+                        try {
+                            const token = localStorage.getItem('token');
+                            if (!token) { alert('Login required'); return; }
+                            const catName = categoryName;
+                            const catSel = await (await fetch('/api/categories/select-by-name/' + encodeURIComponent(catName), { method: 'POST', credentials: 'include' })).json();
+                            const res = await fetch(`/api/photos/categories/${catSel.category_id}/photos/${e.id}`, {
+                                method: 'DELETE',
+                                headers: { Authorization: 'Bearer ' + token }
+                            });
+                            if (res.ok) { div.remove(); }
+                            else { const d = await res.json().catch(() => ({ detail: 'Failed' })); alert(d.detail || 'Failed to delete'); }
+                        } catch (err) { alert('Error deleting'); }
+                    });
+                }
+                const setBtn = div.querySelector('.set-elo-btn');
+                if (setBtn) {
+                    setBtn.addEventListener('click', async () => {
                         const token = localStorage.getItem('token');
-                        if(!token){ alert('Login required'); return; }
-                        const catName = categoryName;
-                        const catSel = await (await fetch('/api/categories/select-by-name/' + encodeURIComponent(catName), {method:'POST', credentials:'include'})).json();
-                        const res = await fetch(`/api/photos/categories/${catSel.category_id}/photos/${e.id}` , {
-                            method: 'DELETE',
-                            headers: { Authorization: 'Bearer ' + token }
-                        });
-                        if(res.ok){ div.remove(); }
-                        else{ const d = await res.json().catch(()=>({detail:'Failed'})); alert(d.detail || 'Failed to delete'); }
-                    }catch(err){ alert('Error deleting'); }
-                });
+                        if (!token) { alert('Login required'); return; }
+                        const current = Number(setBtn.getAttribute('data-current-elo')) || 1200;
+                        const input = prompt('Set new ELO (1 - 3999):', Math.round(current));
+                        if (input === null) return;
+                        const value = Number(input);
+                        if (!isFinite(value) || value <= 0 || value >= 4000) { alert('Invalid ELO'); return; }
+                        try {
+                            const res = await fetch(`/api/photos/${e.id}/elo?elo=${encodeURIComponent(value)}`, {
+                                method: 'PATCH',
+                                headers: { Authorization: 'Bearer ' + token }
+                            });
+                            if (res.ok) {
+                                // refresh just this card's displayed rating
+                                const meta = div.querySelector('.meta span');
+                                if (meta) { meta.textContent = meta.textContent.replace(/^[^\d]*/, '').replace(/\d+/, String(Math.round(value))); }
+                            } else {
+                                const d = await res.json().catch(() => ({ detail: 'Failed' }));
+                                alert(d.detail || 'Failed to set ELO');
+                            }
+                        } catch (err) { alert('Error setting ELO'); }
+                    });
+                }
             }
-            const setBtn = div.querySelector('.set-elo-btn');
-            if(setBtn){
-                setBtn.addEventListener('click', async () => {
-                    const token = localStorage.getItem('token');
-                    if(!token){ alert('Login required'); return; }
-                    const current = Number(setBtn.getAttribute('data-current-elo')) || 1200;
-                    const input = prompt('Set new ELO (1 - 3999):', Math.round(current));
-                    if(input === null) return;
-                    const value = Number(input);
-                    if(!isFinite(value) || value <= 0 || value >= 4000){ alert('Invalid ELO'); return; }
-                    try{
-                        const res = await fetch(`/api/photos/${e.id}/elo?elo=${encodeURIComponent(value)}`, {
-                            method: 'PATCH',
-                            headers: { Authorization: 'Bearer ' + token }
-                        });
-                        if(res.ok){
-                            // refresh just this card's displayed rating
-                            const meta = div.querySelector('.meta span');
-                            if(meta){ meta.textContent = meta.textContent.replace(/^[^\d]*/,'').replace(/\d+/, String(Math.round(value))); }
-                        }else{
-                            const d = await res.json().catch(()=>({detail:'Failed'}));
-                            alert(d.detail || 'Failed to set ELO');
-                        }
-                    }catch(err){ alert('Error setting ELO'); }
-                });
-            }
-        }
-        grid.appendChild(div);
-    });
-}
+            grid.appendChild(div);
+        });
+    }
 </script>
 {% endblock %}
