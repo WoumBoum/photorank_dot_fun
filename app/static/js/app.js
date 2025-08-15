@@ -184,9 +184,14 @@ class PhotoRankApp {
             await this.loadPhotoPair();
         } else if (path === '/leaderboard' || /\/[^/]+\/leaderboard$/.test(path)) {
             // If URL is /{category}/leaderboard, prefer path-based API
-            const m = path.match(/^\/([^/]+)\/leaderboard$/);
+            const m = path.match(/^\/([^/]+)\/leaderboard\/?$/);
             const categoryName = m ? decodeURIComponent(m[1]) : null;
-            await this.loadLeaderboard(categoryName);
+            // Only load leaderboard if we have a category OR we are exactly on /leaderboard
+            if (categoryName) {
+                await this.loadLeaderboard(categoryName);
+            } else if (path === '/leaderboard') {
+                await this.loadLeaderboard(null);
+            }
         } else if (path === '/stats') {
             await this.loadStats();
             this.initPseudonymEditor();
@@ -714,7 +719,9 @@ window.updateToggleButton = function(theme) {
 document.addEventListener('DOMContentLoaded', () => {
     // Only initialize the SPA on pages that opt-in
     if (document.querySelector('[data-init-app]')) {
-        new PhotoRankApp();
+        if (!window.__photorankApp) {
+            window.__photorankApp = new PhotoRankApp();
+        }
     }
     initThemeToggle();
 });
