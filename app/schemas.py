@@ -1,5 +1,5 @@
 from pydantic import BaseModel, EmailStr, constr, validator
-from typing import Optional
+from typing import Optional, List
 from datetime import datetime
 
 
@@ -35,7 +35,7 @@ class CategoryOut(CategoryBase):
     id: int
     created_at: datetime
     question: str
-    owner_id: int | None = None
+    owner_id: Optional[int] = None
 
     class Config:
         orm_mode = True
@@ -94,7 +94,7 @@ class VoteOut(BaseModel):
 
 
 class PhotoPair(BaseModel):
-    photos: list[PhotoOut]
+    photos: List[PhotoOut]
 
 
 class LeaderboardEntry(BaseModel):
@@ -113,6 +113,6 @@ class UsernameUpdate(BaseModel):
 
 
 class UserStats(BaseModel):
-    photos: list[LeaderboardEntry]
+    photos: List[LeaderboardEntry]
     total_photos: int
     total_votes: int

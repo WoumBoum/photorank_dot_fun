@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from sqlalchemy import func
+from typing import Tuple
 
 from ..database import get_db
 from ..models import Vote, Photo, User
@@ -12,7 +13,7 @@ router = APIRouter(prefix="/votes", tags=['Votes'])
 K_FACTOR = 32
 
 
-def calculate_elo_change(winner_rating: float, loser_rating: float) -> tuple[float, float]:
+def calculate_elo_change(winner_rating: float, loser_rating: float) -> Tuple[float, float]:
     """Calculate ELO rating changes"""
     expected_winner = 1 / (1 + 10 ** ((loser_rating - winner_rating) / 400))
     expected_loser = 1 - expected_winner
