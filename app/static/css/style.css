@@ -143,8 +143,7 @@ nav {
 
 .photo-container img {
     width: 100%;
-    height: auto;
-    max-height: 500px;
+    height: 300px; /* match stats image box */
     object-fit: contain;
     border: 1px solid var(--border-color);
 }

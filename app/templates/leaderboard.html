@@ -169,7 +169,7 @@ async function renderLeaderboard(entries) {
         div.className = 'photo-item';
         const crown = idx === 0 ? '👑 ' : '';
         div.innerHTML = `
-            <div class="photo" style="background:#f0f0f0;">
+            <div class="stat-card">
                 <img src="/api/photos/${e.filename}" alt="${e.filename}" />
             </div>
             <div class="meta">
