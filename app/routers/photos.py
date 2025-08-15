@@ -546,17 +546,20 @@ async def delete_photo(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    """Delete a user's own photo"""
+    """Delete a photo: allowed for owner or site moderator."""
+    import os
+    mod_provider = os.getenv("MODERATOR_PROVIDER")
+    mod_provider_id = os.getenv("MODERATOR_PROVIDER_ID")
+    def is_site_moderator(user: User) -> bool:
+        return bool(mod_provider and mod_provider_id and user.provider == mod_provider and str(user.provider_id) == str(mod_provider_id))
+
     photo = db.query(Photo).filter(Photo.id == photo_id).first()
     
     if not photo:
         raise HTTPException(status_code=404, detail="Photo not found")
     
-    if photo.owner_id != current_user.id:
-        raise HTTPException(
-            status_code=403, 
-            detail="You can only delete your own photos"
-        )
+    if photo.owner_id != current_user.id and not is_site_moderator(current_user):
+        raise HTTPException(status_code=403, detail="Not authorized to delete this photo")
     
     # Delete the file from R2 storage
     try:
@@ -577,6 +580,7 @@ async def delete_photo(
     return {"message": "Photo deleted successfully"}
 
 
+
 @router.delete("/categories/{category_id}/photos/{photo_id}")
 async def delete_photo_as_category_owner(
     category_id: int,
@@ -584,11 +588,17 @@ async def delete_photo_as_category_owner(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    """Category owner can delete any photo in their category."""
+    """Category owner or site moderator can delete any photo in the category."""
+    import os
+    mod_provider = os.getenv("MODERATOR_PROVIDER")
+    mod_provider_id = os.getenv("MODERATOR_PROVIDER_ID")
+    def is_site_moderator(user: User) -> bool:
+        return bool(mod_provider and mod_provider_id and user.provider == mod_provider and str(user.provider_id) == str(mod_provider_id))
+
     category = db.query(Category).filter(Category.id == category_id).first()
     if not category:
         raise HTTPException(status_code=404, detail="Category not found")
-    if category.owner_id != current_user.id:
+    if category.owner_id != current_user.id and not is_site_moderator(current_user):
         raise HTTPException(status_code=403, detail="Not authorized to moderate this category")
 
     photo = db.query(Photo).filter(Photo.id == photo_id, Photo.category_id == category_id).first()
