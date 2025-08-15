@@ -2,7 +2,6 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi import FastAPI, Request
 from starlette.middleware.sessions import SessionMiddleware
-from starlette.middleware.proxy_headers import ProxyHeadersMiddleware
 from starlette.middleware.trustedhost import TrustedHostMiddleware
 
 from .config import description, title
@@ -21,8 +20,7 @@ app = FastAPI(
 # Session middleware
 app.add_middleware(SessionMiddleware, secret_key="your-secret-key-change-in-production")
 
-# Respect proxy forwarded headers and restrict hosts
-app.add_middleware(ProxyHeadersMiddleware, trusted_hosts="*")
+# Restrict hosts; proxy headers handled by Uvicorn
 app.add_middleware(TrustedHostMiddleware, allowed_hosts=["photorank.fun", "www.photorank.fun", "photorank-00e51b.onrender.com", "localhost", "127.0.0.1"]) 
 
 # CORS middleware
