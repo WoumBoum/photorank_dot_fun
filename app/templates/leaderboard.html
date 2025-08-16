@@ -14,25 +14,28 @@
         </nav>
     </header>
 
-    <div class="site-ribbon" aria-label="Site info">
-      <div class="ribbon-left"></div>
-      <div class="ribbon-right">
-        <span class="brand">photorank.fun</span>
-        <span class="divider">·</span>
-        <span class="tagline">disagree? cope harder or actually vote</span>
-      </div>
-    </div>
-
     <div class="leaderboard">
+        <h2 id="category-question">Results of:</h2>
+        <div id="category-vote-count" style="margin-top:6px;color:#666;font-size:0.95em;"></div>
         <h2 id="category-question">Results of:</h2>
         <div id="category-vote-count" style="margin-top:6px;color:#666;font-size:0.95em;"></div>
         <div class="current-category">
             {% if category_name %}
             <span>Category: <strong>{{ category_name }}</strong></span>
             <a href="/categories" style="margin-left: 10px; font-size: 0.9em;">All Categories</a>
+            <div class="category-meta-line" style="margin-top:4px;color:#666;font-size:0.95em;">
+              <span class="brand">photorank.fun</span>
+              <span class="divider" style="color:#ccc;">·</span>
+              <span class="tagline">disagree? cope harder or actually vote</span>
+            </div>
             {% elif selected_category_name %}
             <span>Showing: <strong>{{ selected_category_name }}</strong></span>
             <a href="/categories" style="margin-left: 10px; font-size: 0.9em;">Change Category</a>
+            <div class="category-meta-line" style="margin-top:4px;color:#666;font-size:0.95em;">
+              <span class="brand">photorank.fun</span>
+              <span class="divider" style="color:#ccc;">·</span>
+              <span class="tagline">disagree? cope harder or actually vote</span>
+            </div>
             {% else %}
             <span>No category selected</span>
             <a href="/categories" style="margin-left: 10px; font-size: 0.9em;">Select Category</a>
