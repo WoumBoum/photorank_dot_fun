@@ -31,6 +31,12 @@ class CategoryCreate(BaseModel):
     question: constr(strip_whitespace=True, min_length=4, max_length=200)
 
 
+class CategoryUpdate(BaseModel):
+    name: Optional[constr(strip_whitespace=True, min_length=2, max_length=40, regex=r"^[A-Za-z0-9_-]+$")]
+    question: Optional[constr(strip_whitespace=True, min_length=4, max_length=200)]
+    description: Optional[constr(strip_whitespace=True, max_length=200)] = None
+
+
 class CategoryOut(CategoryBase):
     id: int
     created_at: datetime

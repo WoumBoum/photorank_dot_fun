@@ -178,11 +178,19 @@ async def google_callback(code: str, db: Session = Depends(get_db)):
 @router.get("/me")
 def get_current_user_info(current_user: User = Depends(get_current_user)):
     """Get current user info"""
+    import os
+    is_moderator = bool(
+        os.getenv("MODERATOR_PROVIDER")
+        and os.getenv("MODERATOR_PROVIDER_ID")
+        and current_user.provider == os.getenv("MODERATOR_PROVIDER")
+        and str(current_user.provider_id) == str(os.getenv("MODERATOR_PROVIDER_ID"))
+    )
     return {
         "id": current_user.id,
         "email": current_user.email,
         "username": current_user.username,
-        "created_at": current_user.created_at
+        "created_at": current_user.created_at,
+        "is_moderator": is_moderator
     }
 
 

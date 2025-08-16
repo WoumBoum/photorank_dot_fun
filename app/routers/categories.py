@@ -5,7 +5,7 @@ from typing import List
 
 from ..database import get_db
 from ..models import Category, Photo, Vote, User
-from ..schemas import CategoryOut, CategoryDetail, CategoryCreate
+from ..schemas import CategoryOut, CategoryDetail, CategoryCreate, CategoryUpdate
 from ..oauth2 import get_current_user
 from .photos import s3_client, R2_BUCKET_NAME  # reuse R2 client
 
@@ -140,6 +140,36 @@ def boost_votes(category_id: int, amount: int, db: Session = Depends(get_db), cu
     category.boosted_votes = (category.boosted_votes or 0) + int(amount)
     db.commit()
     return {"message": "Boost applied", "boosted_votes": category.boosted_votes, "category_id": category.id}
+
+@router.patch("/{category_id}")
+def update_category(category_id: int, payload: CategoryUpdate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    """Update category name/question/description. Only site moderator allowed."""
+    category = db.query(Category).filter(Category.id == category_id).first()
+    if not category:
+        raise HTTPException(status_code=404, detail="Category not found")
+    if not is_site_moderator(current_user):
+        raise HTTPException(status_code=403, detail="Not authorized")
+
+    changed = False
+    if payload.name is not None:
+        new_name = payload.name.strip()
+        # Check case-insensitive uniqueness
+        exists = db.query(Category).filter(func.lower(Category.name) == func.lower(new_name), Category.id != category_id).first()
+        if exists:
+            raise HTTPException(status_code=400, detail="Category name already exists")
+        category.name = new_name
+        changed = True
+    if payload.question is not None:
+        category.question = payload.question.strip()
+        changed = True
+    if payload.description is not None:
+        category.description = payload.description.strip() if payload.description else None
+        changed = True
+    if changed:
+        db.commit()
+        db.refresh(category)
+    return {"id": category.id, "name": category.name, "question": category.question, "description": category.description}
+
 
 @router.delete("/{category_id}")
 def delete_category(category_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):

@@ -19,7 +19,11 @@
         <div id="category-vote-count" style="margin-top:6px;color:#666;font-size:0.95em;"></div>
         <div class="current-category">
             {% if category_name %}
-            <span>Category: <strong>{{ category_name }}</strong></span>
+            <span>Category: <strong id="cat-name-display">{{ category_name }}</strong></span>
+            <div id="cat-edit-controls" style="display:none;margin-top:6px;gap:8px;">
+              <button id="edit-cat-name" class="btn" style="padding:4px 8px;">Edit name</button>
+              <button id="edit-cat-question" class="btn" style="padding:4px 8px;">Edit question</button>
+            </div>
             <a href="/categories" style="margin-left: 10px; font-size: 0.9em;">All Categories</a>
             <div class="category-meta-line" style="margin-top:4px;color:#666;font-size:0.95em;">
               <span class="brand">photorank.fun</span>
@@ -27,7 +31,11 @@
               <span class="tagline">disagree? cope harder or actually vote</span>
             </div>
             {% elif selected_category_name %}
-            <span>Showing: <strong>{{ selected_category_name }}</strong></span>
+            <span>Showing: <strong id="cat-name-display">{{ selected_category_name }}</strong></span>
+            <div id="cat-edit-controls" style="display:none;margin-top:6px;gap:8px;">
+              <button id="edit-cat-name" class="btn" style="padding:4px 8px;">Edit name</button>
+              <button id="edit-cat-question" class="btn" style="padding:4px 8px;">Edit question</button>
+            </div>
             <a href="/categories" style="margin-left: 10px; font-size: 0.9em;">Change Category</a>
             <div class="category-meta-line" style="margin-top:4px;color:#666;font-size:0.95em;">
               <span class="brand">photorank.fun</span>
@@ -86,7 +94,56 @@
                     }
                 } catch (e) { /* ignore */ }
                 const catData = await (await fetch('/api/categories/' + cat.category_id)).json();
-                if (catData && catData.question) document.getElementById('category-question').textContent = `Results of: ${catData.question}`;
+                 if (catData && catData.question) document.getElementById('category-question').textContent = `Results of: ${catData.question}`;
+                 // Setup edit controls visibility and actions
+                 try {
+                   const token = localStorage.getItem('token');
+                   if (token) {
+                     const meRes = await fetch('/api/users/me', { headers: { Authorization: 'Bearer ' + token } });
+                     if (meRes.ok) {
+                       const me = await meRes.json();
+                       const detailsList = await (await fetch('/api/categories/details?t=' + Date.now())).json();
+                       const det = detailsList.find(x => x.name === categoryName);
+                       const isOwner = me && det && det.owner_id && me.id === det.owner_id;
+                       const isModerator = me && me.is_moderator;
+                       if (isOwner || isModerator) {
+                         const ctrl = document.getElementById('cat-edit-controls');
+                         if (ctrl) ctrl.style.display = 'flex';
+                         const editNameBtn = document.getElementById('edit-cat-name');
+                         const editQBtn = document.getElementById('edit-cat-question');
+                         if (editNameBtn) editNameBtn.onclick = async () => {
+                           const current = document.getElementById('cat-name-display')?.textContent || categoryName;
+                           const input = prompt('New category name:', current);
+                           if (!input || input.trim() === current) return;
+                           const res = await fetch(`/api/categories/${cat.category_id}`, {
+                             method: 'PATCH',
+                             headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
+                             body: JSON.stringify({ name: input.trim() })
+                           });
+                           const data = await res.json().catch(()=>({detail:'Failed'}));
+                           if (!res.ok) { alert(data.detail || 'Failed'); return; }
+                           document.getElementById('cat-name-display').textContent = data.name;
+                           location.reload();
+                         };
+                         if (editQBtn) editQBtn.onclick = async () => {
+                           const currentQ = (catData && catData.question) || '';
+                           const input = prompt('New question:', currentQ);
+                           if (input === null) return;
+                           const trimmed = input.trim();
+                           if (!trimmed || trimmed === currentQ) return;
+                           const res = await fetch(`/api/categories/${cat.category_id}`, {
+                             method: 'PATCH',
+                             headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
+                             body: JSON.stringify({ question: trimmed })
+                           });
+                           const data = await res.json().catch(()=>({detail:'Failed'}));
+                           if (!res.ok) { alert(data.detail || 'Failed'); return; }
+                           document.getElementById('category-question').textContent = `Results of: ${data.question}`;
+                         };
+                       }
+                     }
+                   }
+                 } catch (e) { /* ignore */ }
             } catch (e) { console.error('failed to fetch category question', e); }
             // Ensure session uses this category
             try {
