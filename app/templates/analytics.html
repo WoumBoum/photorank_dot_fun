@@ -163,7 +163,7 @@
         if (!res.ok) { throw new Error('HTTP ' + res.status); }
         return res.json();
       }
-      function renderLine(containerId, points, stroke, height = 180) {
+      function renderLine(containerId, points, stroke, height = 220) {
         const el = document.getElementById(containerId);
         if (!el) { return; }
         if (!points || points.length === 0) { el.innerHTML = '<article role="note">No data yet</article>'; return; }
@@ -175,26 +175,37 @@
         const minY = 0;
         const xstep = xs.length > 1 ? (w - 20) / (xs.length - 1) : 0;
         const scaleY = v => h - 10 - (v - minY) * (h - 20) / (maxY - minY || 1);
-        const path = points.map((p, i) => (i === 0 ? 'M' : 'L') + (10 + i * xstep).toFixed(1) + ',' + scaleY(p.count).toFixed(1)).join(' ');
-        const gridLines = (() => {
-          const lines = [];
-          const steps = 4;
-          for (let i = 0; i <= steps; i++) {
-            const yv = (maxY / steps) * i;
-            const y = scaleY(yv).toFixed(1);
-            lines.push(`<line x1="10" y1="${y}" x2="${w - 10}" y2="${y}" stroke="rgba(255,255,255,0.08)" stroke-width="1"/>`);
-          }
-          return lines.join('');
-        })();
-        const last = points[points.length - 1];
-        el.innerHTML = `<svg width="${w}" height="${h}">`
-          + gridLines
-          + `<path d="${path}" fill="none" stroke="rgba(255,255,255,0.12)" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>`
-          + `<path d="${path}" fill="none" stroke="${stroke}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>`
-          + `</svg>`
-          + `<small class="kpi">Last: ${last.count}</small>`;
+         const path = points.map((p, i) => (i === 0 ? 'M' : 'L') + (10 + i * xstep).toFixed(1) + ',' + scaleY(p.count).toFixed(1)).join(' ');
+         // Y ticks only at data values
+         const yVals = Array.from(new Set(ys)).sort((a,b)=>a-b);
+         const yTicks = yVals.map(v => {
+           const y = scaleY(v).toFixed(1);
+           return `<g><line x1="10" y1="${y}" x2="${w - 10}" y2="${y}" stroke="rgba(255,255,255,0.12)" stroke-width="1"/>`
+                + `<text x="${w - 6}" y="${(+y+4).toFixed(1)}" fill="#aaa" font-size="10" text-anchor="end">${v}</text></g>`;
+         }).join('');
+         // X ticks at each day
+         const xTicks = points.map((p,i)=>{
+           const x = (10 + i * xstep).toFixed(1);
+           const y = (h - 4).toFixed(1);
+           return `<g><line x1="${x}" y1="${h-20}" x2="${x}" y2="${h-10}" stroke="rgba(255,255,255,0.12)" stroke-width="1"/>`
+                + `<text transform="translate(${x},${y}) rotate(45)" fill="#aaa" font-size="9" text-anchor="start">${p.date}</text></g>`;
+         }).join('');
+         // Point markers
+         const markers = points.map((p,i)=>{
+           const cx = (10 + i * xstep).toFixed(1);
+           const cy = scaleY(p.count).toFixed(1);
+           return `<circle cx="${cx}" cy="${cy}" r="2.5" fill="${stroke}"/>`;
+         }).join('');
+         const last = points[points.length - 1];
+         el.innerHTML = `<svg width="${w}" height="${h}">`
+           + yTicks + xTicks
+           + `<path d="${path}" fill="none" stroke="rgba(255,255,255,0.12)" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>`
+           + `<path d="${path}" fill="none" stroke="${stroke}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>`
+           + markers
+           + `</svg>`
+           + `<small class="kpi">Last: ${last.count}</small>`;
       }
-      function renderMulti(containerId, series, height = 180) {
+      function renderMulti(containerId, series, height = 220) {
         const el = document.getElementById(containerId);
         if (!el) { return; }
         const w = el.clientWidth || 1000;
@@ -206,21 +217,33 @@
         const N = series[0].points.length;
         const xstep = N > 1 ? (w - 20) / (N - 1) : 0;
         const scaleY = v => h - 10 - (v - minY) * (h - 20) / (maxY - minY || 1);
-        const gridLines = (() => {
-          const lines = [];
-          const steps = 4;
-          for (let i = 0; i <= steps; i++) {
-            const yv = (maxY / steps) * i;
-            const y = scaleY(yv).toFixed(1);
-            lines.push(`<line x1="10" y1="${y}" x2="${w - 10}" y2="${y}" stroke="rgba(255,255,255,0.08)" stroke-width="1"/>`);
-          }
-          return lines.join('');
-        })();
-        let svg = `<svg width="${w}" height="${h}">` + gridLines;
+        // Y ticks only at data values (union across series)
+        const yVals = Array.from(new Set(allPoints.map(p=>p.count))).sort((a,b)=>a-b);
+        const yTicks = yVals.map(v => {
+          const y = scaleY(v).toFixed(1);
+          return `<g><line x1="10" y1="${y}" x2="${w - 10}" y2="${y}" stroke="rgba(255,255,255,0.12)" stroke-width="1"/>`
+               + `<text x="${w - 6}" y="${(+y+4).toFixed(1)}" fill="#aaa" font-size="10" text-anchor="end">${v}</text></g>`;
+        }).join('');
+        // X ticks at each day (based on series length)
+        const N = series[0].points.length;
+        const xstep2 = N > 1 ? (w - 20) / (N - 1) : 0;
+        const xTicks = series[0].points.map((p,i)=>{
+          const x = (10 + i * xstep2).toFixed(1);
+          const y = (h - 4).toFixed(1);
+          return `<g><line x1="${x}" y1="${h-20}" x2="${x}" y2="${h-10}" stroke="rgba(255,255,255,0.12)" stroke-width="1"/>`
+               + `<text transform="translate(${x},${y}) rotate(45)" fill="#aaa" font-size="9" text-anchor="start">${p.date}</text></g>`;
+        }).join('');
+        let svg = `<svg width="${w}" height="${h}">` + yTicks + xTicks;
         for (const s of series) {
           const path = s.points.map((p, i) => (i === 0 ? 'M' : 'L') + (10 + i * xstep).toFixed(1) + ',' + scaleY(p.count).toFixed(1)).join(' ');
           svg += `<path d="${path}" fill="none" stroke="rgba(255,255,255,0.12)" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>`;
           svg += `<path d="${path}" fill="none" stroke="${s.color}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>`;
+          // markers
+          svg += s.points.map((p,i)=>{
+            const cx = (10 + i * xstep).toFixed(1);
+            const cy = scaleY(p.count).toFixed(1);
+            return `<circle cx="${cx}" cy="${cy}" r="2.5" fill="${s.color}"/>`;
+          }).join('');
         }
         svg += '</svg>';
         const legend = series.map(s => `<span style="color:${s.color}">${s.label}</span>`).join(' · ');
