@@ -39,33 +39,8 @@ def _is_moderator(user: User) -> bool:
 
 
 @router.get("/", response_class=HTMLResponse)
-def analytics_page(request: Request, db: Session = Depends(get_db)):
-    # Soft guard with redirects for first-load navigations
-    # Try to get user via header Bearer from JS fetch-once pattern; otherwise try cookie
-    # Reuse get_current_user if Authorization header present; else fall back to cookie manually
-    user = None
-    # Attempt header-based auth using dependency mimic
-    try:
-        user = get_current_user.__wrapped__(request=request, db=db)  # type: ignore
-    except Exception:
-        # Fallback: if not provided or fails, try to read cookie directly
-        token = request.cookies.get("access_token")
-        if token and token.lower().startswith("bearer "):
-            token = token.split(" ", 1)[1]
-        if token:
-            from ..oauth2 import verify_access_token
-            from fastapi import status, HTTPException
-            try:
-                user_id = verify_access_token(token, HTTPException(status_code=401, detail="Invalid token"))
-                user = db.query(User).filter(User.id == user_id).first()
-            except Exception:
-                user = None
-
-    if not user:
-        return RedirectResponse(url="/login", status_code=302)
-    if not _is_moderator(user):
-        return RedirectResponse(url="/categories", status_code=302)
-
+def analytics_page(request: Request):
+    # Publicly renderable HTML (like other pages). JS will gate via API auth.
     return templates.TemplateResponse("analytics.html", {"request": request})
 
 
