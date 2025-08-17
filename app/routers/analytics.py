@@ -84,10 +84,13 @@ def analytics_overview(db: Session = Depends(get_db), _: User = Depends(require_
 
 @router.get("/time-series")
 def analytics_time_series(db: Session = Depends(get_db), _: User = Depends(require_moderator)):
-    """Return time-series for votes/day, unique voters/day, cumulative users/day.
+    """Return time-series for:
+    - votes/day
+    - unique voters/day
+    - cumulative users/day
+    - DAU/WAU/MAU (activity from votes or uploads)
     Dates are YYYY-MM-DD (UTC), contiguous from first data date to today.
     """
-    from sqlalchemy import text
     # Find min created_at across users, photos, votes
     min_user = db.query(func.min(User.created_at)).scalar()
     min_photo = db.query(func.min(Photo.created_at)).scalar()
@@ -103,6 +106,9 @@ def analytics_time_series(db: Session = Depends(get_db), _: User = Depends(requi
             "votes_per_day": empty,
             "unique_voters_per_day": empty,
             "users_cumulative_per_day": empty,
+            "dau_per_day": empty,
+            "wau_per_day": empty,
+            "mau_per_day": empty,
         }
 
     start_date = min_date.date()
@@ -148,8 +154,74 @@ def analytics_time_series(db: Session = Depends(get_db), _: User = Depends(requi
     votes_series = [{"date": d.strftime("%Y-%m-%d"), "count": votes_map.get(d, 0)} for d in full_dates]
     unique_series = [{"date": d.strftime("%Y-%m-%d"), "count": unique_map.get(d, 0)} for d in full_dates]
 
+    # Activity sets per day: users who voted or uploaded
+    vote_user_rows = (
+        db.query(func.date_trunc('day', Vote.created_at).label('day'), Vote.user_id)
+        .all()
+    )
+    upload_user_rows = (
+        db.query(func.date_trunc('day', Photo.created_at).label('day'), Photo.owner_id)
+        .all()
+    )
+    # Build per-day sets
+    per_day_users = {d: set() for d in full_dates}
+    for day_dt, uid in vote_user_rows:
+        if day_dt is None or uid is None:
+            continue
+        day = day_dt.date()
+        if day in per_day_users:
+            per_day_users[day].add(uid)
+    for day_dt, uid in upload_user_rows:
+        if day_dt is None or uid is None:
+            continue
+        day = day_dt.date()
+        if day in per_day_users:
+            per_day_users[day].add(uid)
+
+    # DAU
+    dau_series = [{"date": d.strftime("%Y-%m-%d"), "count": len(per_day_users.get(d, set()))} for d in full_dates]
+
+    # WAU: rolling 7-day inclusive window [d-6, d]
+    from collections import deque
+    window = deque()
+    window_sets = deque()
+    wau_series = []
+    active_union = set()
+    for d in full_dates:
+        # add current day
+        window.append(d)
+        todays = per_day_users.get(d, set())
+        window_sets.append(todays)
+        active_union |= todays
+        # drop days older than 6 days before d
+        while (d - window[0]).days > 6:
+            old_day = window.popleft()
+            old_set = window_sets.popleft()
+            # remove old_set from union by recomputing (safe and simple)
+            active_union = set().union(*window_sets) if window_sets else set()
+        wau_series.append({"date": d.strftime("%Y-%m-%d"), "count": len(active_union)})
+
+    # MAU: rolling 30-day inclusive window [d-29, d]
+    window = deque()
+    window_sets = deque()
+    mau_series = []
+    active_union = set()
+    for d in full_dates:
+        window.append(d)
+        todays = per_day_users.get(d, set())
+        window_sets.append(todays)
+        active_union |= todays
+        while (d - window[0]).days > 29:
+            old_day = window.popleft()
+            old_set = window_sets.popleft()
+            active_union = set().union(*window_sets) if window_sets else set()
+        mau_series.append({"date": d.strftime("%Y-%m-%d"), "count": len(active_union)})
+
     return {
         "votes_per_day": votes_series,
         "unique_voters_per_day": unique_series,
         "users_cumulative_per_day": users_cum,
+        "dau_per_day": dau_series,
+        "wau_per_day": wau_series,
+        "mau_per_day": mau_series,
     }

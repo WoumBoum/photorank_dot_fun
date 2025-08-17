@@ -40,6 +40,30 @@
         </tbody>
       </table>
     </section>
+
+    <section>
+      <h2>Votes per day</h2>
+      <div id="chart-votes" aria-label="Votes per day"></div>
+      <small id="votes-range" class="kpi"></small>
+    </section>
+
+    <section>
+      <h2>Unique voters per day</h2>
+      <div id="chart-unique" aria-label="Unique voters per day"></div>
+      <small id="unique-range" class="kpi"></small>
+    </section>
+
+    <section>
+      <h2>Cumulative users</h2>
+      <div id="chart-users" aria-label="Cumulative users"></div>
+      <small id="users-range" class="kpi"></small>
+    </section>
+
+    <section>
+      <h2>DAU / WAU / MAU</h2>
+      <div id="chart-activity" aria-label="DAU/WAU/MAU"></div>
+      <small id="activity-range" class="kpi"></small>
+    </section>
   </main>
   <script>
     (async function(){
@@ -52,16 +76,82 @@
         if(!res.ok){ throw new Error('HTTP '+res.status); }
         return res.json();
       }
+      function renderLine(containerId, points, stroke, height=160){
+        const el = document.getElementById(containerId);
+        if(!el){ return; }
+        if(!points || points.length === 0){ el.innerHTML = '<article role="note">No data yet</article>'; return; }
+        const w = el.clientWidth || 1000;
+        const h = height;
+        const xs = points.map((p,i)=>i);
+        const ys = points.map(p=>p.count);
+        const maxY = Math.max(1, ...ys);
+        const minY = 0;
+        const xstep = xs.length>1 ? (w-20)/(xs.length-1) : 0;
+        const scaleY = v => h - 10 - (v-minY) * (h-20) / (maxY-minY||1);
+        const path = points.map((p,i)=> (i===0? 'M':'L') + (10+i*xstep).toFixed(1) + ',' + scaleY(p.count).toFixed(1)).join(' ');
+        const last = points[points.length-1];
+        el.innerHTML = `<svg width="${w}" height="${h}"><path d="${path}" fill="none" stroke="${stroke}" stroke-width="2"/></svg>` +
+          `<small class="kpi">Last: ${last.count}</small>`;
+      }
+      function renderMulti(containerId, series, height=160){
+        const el = document.getElementById(containerId);
+        if(!el){ return; }
+        const w = el.clientWidth || 1000;
+        const h = height;
+        const allPoints = series.flatMap(s=>s.points);
+        if(allPoints.length===0){ el.innerHTML = '<article role="note">No data yet</article>'; return; }
+        const maxY = Math.max(1, ...allPoints.map(p=>p.count));
+        const minY = 0;
+        const N = series[0].points.length;
+        const xstep = N>1 ? (w-20)/(N-1) : 0;
+        const scaleY = v => h - 10 - (v-minY) * (h-20) / (maxY-minY||1);
+        let svg = `<svg width="${w}" height="${h}">`;
+        for(const s of series){
+          const path = s.points.map((p,i)=> (i===0? 'M':'L') + (10+i*xstep).toFixed(1) + ',' + scaleY(p.count).toFixed(1)).join(' ');
+          svg += `<path d="${path}" fill="none" stroke="${s.color}" stroke-width="2"/>`;
+        }
+        svg += '</svg>';
+        const legend = series.map(s=>`<span style="color:${s.color}">${s.label}</span>`).join(' · ');
+        el.innerHTML = svg + `<div class="kpi">${legend}</div>`;
+      }
       try{
-        const data = await fetchJSON('/analytics/overview');
-        if(!data) return;
-        for(const [k,v] of Object.entries(data)){
-          const el = document.getElementById(k);
-          if(el) el.textContent = v;
+        const overview = await fetchJSON('/analytics/overview');
+        if(overview){
+          for(const [k,v] of Object.entries(overview)){
+            const el = document.getElementById(k);
+            if(el) el.textContent = v;
+          }
         }
       }catch(e){
         const tbody = document.getElementById('kpi-body');
         tbody.innerHTML = '<tr><td colspan="2"><article role="alert">Failed to load overview. '+(e.message||e)+'</article></td></tr>';
+      }
+      // Time-series
+      try{
+        const series = await fetchJSON('/analytics/time-series');
+        if(!series) return;
+        const vp = series.votes_per_day || [];
+        const up = series.unique_voters_per_day || [];
+        const uc = series.users_cumulative_per_day || [];
+        const dau = series.dau_per_day || [];
+        const wau = series.wau_per_day || [];
+        const mau = series.mau_per_day || [];
+        const rangeText = pts => pts.length? `${pts[0].date} → ${pts[pts.length-1].date}` : '';
+        renderLine('chart-votes', vp, '#111');
+        document.getElementById('votes-range').textContent = rangeText(vp);
+        renderLine('chart-unique', up, '#444');
+        document.getElementById('unique-range').textContent = rangeText(up);
+        renderLine('chart-users', uc, '#000');
+        document.getElementById('users-range').textContent = rangeText(uc);
+        renderMulti('chart-activity', [
+          {label:'DAU', color:'#000', points:dau},
+          {label:'WAU', color:'#0a84ff', points:wau},
+          {label:'MAU', color:'#d0021b', points:mau}
+        ]);
+        document.getElementById('activity-range').textContent = rangeText(dau||wau||mau);
+      }catch(e){
+        const addAlert = (id)=>{ const el = document.getElementById(id); if(el) el.innerHTML = '<article role="alert">Failed to load series.</article>'; };
+        addAlert('chart-votes'); addAlert('chart-unique'); addAlert('chart-users'); addAlert('chart-activity');
       }
     })();
   </script>
