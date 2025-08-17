@@ -214,8 +214,8 @@
         if (allPoints.length === 0) { el.innerHTML = '<article role="note">No data yet</article>'; return; }
         const maxY = Math.max(1, ...allPoints.map(p => p.count));
         const minY = 0;
-        const N = series[0].points.length;
-        const xstep = N > 1 ? (w - 20) / (N - 1) : 0;
+        const nPts = series[0].points.length;
+        const xstep = nPts > 1 ? (w - 20) / (nPts - 1) : 0;
         const scaleY = v => h - 10 - (v - minY) * (h - 20) / (maxY - minY || 1);
         // Y ticks only at data values (union across series)
         const yVals = Array.from(new Set(allPoints.map(p=>p.count))).sort((a,b)=>a-b);
@@ -225,8 +225,12 @@
                + `<text x="${w - 6}" y="${(+y+4).toFixed(1)}" fill="#aaa" font-size="10" text-anchor="end">${v}</text></g>`;
         }).join('');
         // X ticks at each day (based on series length)
-        const N = series[0].points.length;
-        const xstep2 = N > 1 ? (w - 20) / (N - 1) : 0;
+        const xTicks = series[0].points.map((p,i)=>{
+          const x = (10 + i * xstep).toFixed(1);
+          const y = (h - 4).toFixed(1);
+          return `<g><line x1="${x}" y1="${h-20}" x2="${x}" y2="${h-10}" stroke="rgba(255,255,255,0.12)" stroke-width="1"/>`
+               + `<text transform="translate(${x},${y}) rotate(45)" fill="#aaa" font-size="9" text-anchor="start">${p.date}</text></g>`;
+        }).join('');
         const xTicks = series[0].points.map((p,i)=>{
           const x = (10 + i * xstep2).toFixed(1);
           const y = (h - 4).toFixed(1);
