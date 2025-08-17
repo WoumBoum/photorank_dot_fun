@@ -67,11 +67,23 @@ def analytics_overview(request: Request, db: Session = Depends(get_db), _: User 
     new_users_7d = new_users_7d_q.scalar() or 0
     new_users_30d = new_users_30d_q.scalar() or 0
 
-    total_photos = db.query(func.count(Photo.id)).scalar() or 0
-    new_photos_7d = db.query(func.count(Photo.id)).filter(Photo.created_at >= text("now() - interval '7 days'")) .scalar() or 0
-    new_photos_30d = db.query(func.count(Photo.id)).filter(Photo.created_at >= text("now() - interval '30 days'")) .scalar() or 0
+    # Photos (filter by owner alts when hiding)
+    total_photos_q = db.query(func.count(Photo.id))
+    new_photos_7d_q = db.query(func.count(Photo.id)).filter(Photo.created_at >= text("now() - interval '7 days'"))
+    new_photos_30d_q = db.query(func.count(Photo.id)).filter(Photo.created_at >= text("now() - interval '30 days'"))
+    if hide_alts and alt_ids:
+        total_photos_q = total_photos_q.filter(~Photo.owner_id.in_(alt_ids))
+        new_photos_7d_q = new_photos_7d_q.filter(~Photo.owner_id.in_(alt_ids))
+        new_photos_30d_q = new_photos_30d_q.filter(~Photo.owner_id.in_(alt_ids))
+    total_photos = total_photos_q.scalar() or 0
+    new_photos_7d = new_photos_7d_q.scalar() or 0
+    new_photos_30d = new_photos_30d_q.scalar() or 0
 
-    total_votes = db.query(func.count(Vote.id)).scalar() or 0
+    # Total votes (filter by voter alts when hiding)
+    total_votes_q = db.query(func.count(Vote.id))
+    if hide_alts and alt_ids:
+        total_votes_q = total_votes_q.filter(~Vote.user_id.in_(alt_ids))
+    total_votes = total_votes_q.scalar() or 0
 
     u_life_q = db.query(func.count(func.distinct(Photo.owner_id)))
     u_30_q = db.query(func.count(func.distinct(Photo.owner_id))).filter(Photo.created_at >= text("now() - interval '30 days'"))
@@ -163,9 +175,12 @@ def analytics_time_series(request: Request, db: Session = Depends(get_db), _: Us
     )
     unique_map = {r[0].date(): int(r[1]) for r in unique_rows}
 
-    # users cumulative per day: first get new users per day
+    # users cumulative per day: first get new users per day (respect hide_alts)
+    new_user_q = db.query(func.date_trunc('day', User.created_at).label('day'), func.count(User.id))
+    if hide_alts and alt_ids:
+        new_user_q = new_user_q.filter(~User.id.in_(alt_ids))
     new_user_rows = (
-        db.query(func.date_trunc('day', User.created_at).label('day'), func.count(User.id))
+        new_user_q
         .group_by('day')
         .order_by('day')
         .all()
@@ -189,8 +204,11 @@ def analytics_time_series(request: Request, db: Session = Depends(get_db), _: Us
         vote_user_q
         .all()
     )
+    upload_user_q = db.query(func.date_trunc('day', Photo.created_at).label('day'), Photo.owner_id)
+    if hide_alts and alt_ids:
+        upload_user_q = upload_user_q.filter(~Photo.owner_id.in_(alt_ids))
     upload_user_rows = (
-        db.query(func.date_trunc('day', Photo.created_at).label('day'), Photo.owner_id)
+        upload_user_q
         .all()
     )
     # Build per-day sets
