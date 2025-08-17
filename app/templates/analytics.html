@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -8,9 +8,21 @@
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@latest/css/pico.min.css">
   <link rel="stylesheet" href="/static/css/style.css">
   <style>
-    body { max-width: 1200px; margin: 2rem auto; }
+    /* Force dark page background and readable contrast */
+    :root, html[data-theme="dark"] {
+      --pico-background-color: #000;
+      --pico-color: #fff;
+      --pico-muted-color: #e0e0e0;
+      --pico-primary: #fff;
+      --pico-muted-border-color: #333;
+    }
+    body { max-width: 1200px; margin: 2rem auto; background:#000; color:#fff; }
+    h1,h2,small { color:#fff; }
     table td, table th { white-space: nowrap; }
+    table, thead, tbody, tr, th, td { border-color:#333; }
     .kpi { font-family: "Courier New", monospace; }
+    article[role="alert"], article[role="note"] { background:#111; color:#fff; border:1px solid #333; }
+    svg { background: transparent; }
   </style>
 </head>
 <body>
