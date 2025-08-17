@@ -46,6 +46,8 @@
         </thead>
         <tbody id="kpi-body">
           <tr><td>Total users</td><td id="total_users">—</td></tr>
+          <tr><td>Total users (all)</td><td id="total_users_all">—</td></tr>
+          <tr><td>Total users (excluding alts)</td><td id="total_users_excluding_alts">—</td></tr>
           <tr><td>New users (7d)</td><td id="new_users_7d">—</td></tr>
           <tr><td>New users (30d)</td><td id="new_users_30d">—</td></tr>
           <tr><td>Total photos</td><td id="total_photos">—</td></tr>
@@ -178,12 +180,32 @@
       async function loadAll(){
         try{
           const overview = await fetchJSON('/analytics/overview');
-        if(overview){
-          for(const [k,v] of Object.entries(overview)){
-            const el = document.getElementById(k);
-            if(el) el.textContent = v;
+          const overviewAll = await (async ()=>{
+            // Always unfiltered
+            const res = await fetch('/analytics/overview', { headers: { 'Authorization': 'Bearer '+token } });
+            return res.ok ? res.json() : null;
+          })();
+          const overviewEx = await (async ()=>{
+            // Always filtered by ALT_USER_IDS (if present)
+            const ids = altIds;
+            if(!ids) return null;
+            const u = new URL('/analytics/overview', window.location.origin);
+            u.searchParams.set('exclude_user_ids', ids);
+            const res = await fetch(u.pathname + u.search, { headers: { 'Authorization': 'Bearer '+token } });
+            return res.ok ? res.json() : null;
+          })();
+          if(overview){
+            for(const [k,v] of Object.entries(overview)){
+              const el = document.getElementById(k);
+              if(el) el.textContent = v;
+            }
           }
-        }
+          if(overviewAll && overviewAll.total_users !== undefined){
+            const el = document.getElementById('total_users_all'); if(el) el.textContent = overviewAll.total_users;
+          }
+          if(overviewEx && overviewEx.total_users !== undefined){
+            const el = document.getElementById('total_users_excluding_alts'); if(el) el.textContent = overviewEx.total_users;
+          }
       }catch(e){
         const tbody = document.getElementById('kpi-body');
         tbody.innerHTML = '<tr><td colspan="2"><article role="alert">Failed to load overview. '+(e.message||e)+'</article></td></tr>';
