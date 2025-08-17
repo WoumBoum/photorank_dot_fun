@@ -27,7 +27,13 @@
 </head>
 <body data-alt-user-ids="{{ alt_user_ids }}">
   <main>
-    <h1>Analytics</h1>
+    <h1 style="display:flex;align-items:center;gap:1rem;justify-content:space-between;">
+      <span>Analytics</span>
+      <label style="display:flex;align-items:center;gap:0.5rem;font-size:0.9rem;">
+        <input type="checkbox" id="toggle-hide-alt">
+        <span>Hide alt activity</span>
+      </label>
+    </h1>
     <section>
       <h2>Overview</h2>
       <table role="grid" class="kpi">
@@ -81,8 +87,23 @@
     (async function(){
       const token = localStorage.getItem('token');
       if(!token){ window.location.replace('/login'); return; }
+      const defaultAlt = (document.body.dataset.altUserIds || '').trim();
+      // Stored preferences
+      const storedAlt = localStorage.getItem('analytics_alt_ids');
+      const hideAltPref = localStorage.getItem('analytics_hide_alt') === '1';
+      const altIds = (storedAlt || defaultAlt).trim();
+      const toggle = document.getElementById('toggle-hide-alt');
+      if(toggle){ toggle.checked = hideAltPref; }
+      function withAlt(url){
+        if(!toggle || !toggle.checked || !altIds){ return url; }
+        const u = new URL(url, window.location.origin);
+        // preserve existing params
+        const existing = u.searchParams.get('exclude_user_ids');
+        if(!existing){ u.searchParams.set('exclude_user_ids', altIds); }
+        return u.pathname + (u.search ? u.search : '');
+      }
       async function fetchJSON(url){
-        const res = await fetch(url, { headers: { 'Authorization': 'Bearer '+token } });
+        const res = await fetch(withAlt(url), { headers: { 'Authorization': 'Bearer '+token } });
         if(res.status === 401){ window.location.replace('/login'); return Promise.reject('401'); }
         if(res.status === 403){ window.location.replace('/categories'); return Promise.reject('403'); }
         if(!res.ok){ throw new Error('HTTP '+res.status); }
@@ -151,8 +172,9 @@
         const legend = series.map(s=>`<span style="color:${s.color}">${s.label}</span>`).join(' · ');
         el.innerHTML = svg + `<div class="kpi">${legend}</div>`;
       }
-      try{
-        const overview = await fetchJSON('/analytics/overview');
+      async function loadAll(){
+        try{
+          const overview = await fetchJSON('/analytics/overview');
         if(overview){
           for(const [k,v] of Object.entries(overview)){
             const el = document.getElementById(k);
@@ -189,6 +211,16 @@
       }catch(e){
         const addAlert = (id)=>{ const el = document.getElementById(id); if(el) el.innerHTML = '<article role="alert">Failed to load series.</article>'; };
         addAlert('chart-votes'); addAlert('chart-unique'); addAlert('chart-users'); addAlert('chart-activity');
+      }
+      }
+      // Initial load
+      await loadAll();
+      // Toggle handler
+      if(toggle){
+        toggle.addEventListener('change', async ()=>{
+          localStorage.setItem('analytics_hide_alt', toggle.checked ? '1':'0');
+          await loadAll();
+        });
       }
     })();
   </script>
