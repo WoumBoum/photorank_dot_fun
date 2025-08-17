@@ -88,7 +88,7 @@
         if(!res.ok){ throw new Error('HTTP '+res.status); }
         return res.json();
       }
-      function renderLine(containerId, points, stroke, height=160){
+      function renderLine(containerId, points, stroke, height=180){
         const el = document.getElementById(containerId);
         if(!el){ return; }
         if(!points || points.length === 0){ el.innerHTML = '<article role="note">No data yet</article>'; return; }
@@ -101,11 +101,25 @@
         const xstep = xs.length>1 ? (w-20)/(xs.length-1) : 0;
         const scaleY = v => h - 10 - (v-minY) * (h-20) / (maxY-minY||1);
         const path = points.map((p,i)=> (i===0? 'M':'L') + (10+i*xstep).toFixed(1) + ',' + scaleY(p.count).toFixed(1)).join(' ');
+        const gridLines = (()=>{
+          const lines = [];
+          const steps = 4;
+          for(let i=0;i<=steps;i++){
+            const yv = (maxY/steps)*i;
+            const y = scaleY(yv).toFixed(1);
+            lines.push(`<line x1="10" y1="${y}" x2="${w-10}" y2="${y}" stroke="rgba(255,255,255,0.08)" stroke-width="1"/>`);
+          }
+          return lines.join('');
+        })();
         const last = points[points.length-1];
-        el.innerHTML = `<svg width="${w}" height="${h}"><path d="${path}" fill="none" stroke="${stroke}" stroke-width="2"/></svg>` +
-          `<small class="kpi">Last: ${last.count}</small>`;
+        el.innerHTML = `<svg width="${w}" height="${h}">`
+          + gridLines
+          + `<path d="${path}" fill="none" stroke="rgba(255,255,255,0.12)" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>`
+          + `<path d="${path}" fill="none" stroke="${stroke}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>`
+          + `</svg>`
+          + `<small class="kpi">Last: ${last.count}</small>`;
       }
-      function renderMulti(containerId, series, height=160){
+      function renderMulti(containerId, series, height=180){
         const el = document.getElementById(containerId);
         if(!el){ return; }
         const w = el.clientWidth || 1000;
@@ -117,10 +131,21 @@
         const N = series[0].points.length;
         const xstep = N>1 ? (w-20)/(N-1) : 0;
         const scaleY = v => h - 10 - (v-minY) * (h-20) / (maxY-minY||1);
-        let svg = `<svg width="${w}" height="${h}">`;
+        const gridLines = (()=>{
+          const lines = [];
+          const steps = 4;
+          for(let i=0;i<=steps;i++){
+            const yv = (maxY/steps)*i;
+            const y = scaleY(yv).toFixed(1);
+            lines.push(`<line x1="10" y1="${y}" x2="${w-10}" y2="${y}" stroke="rgba(255,255,255,0.08)" stroke-width="1"/>`);
+          }
+          return lines.join('');
+        })();
+        let svg = `<svg width="${w}" height="${h}">` + gridLines;
         for(const s of series){
           const path = s.points.map((p,i)=> (i===0? 'M':'L') + (10+i*xstep).toFixed(1) + ',' + scaleY(p.count).toFixed(1)).join(' ');
-          svg += `<path d="${path}" fill="none" stroke="${s.color}" stroke-width="2"/>`;
+          svg += `<path d="${path}" fill="none" stroke="rgba(255,255,255,0.12)" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>`;
+          svg += `<path d="${path}" fill="none" stroke="${s.color}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>`;
         }
         svg += '</svg>';
         const legend = series.map(s=>`<span style="color:${s.color}">${s.label}</span>`).join(' · ');
@@ -149,16 +174,16 @@
         const wau = series.wau_per_day || [];
         const mau = series.mau_per_day || [];
         const rangeText = pts => pts.length? `${pts[0].date} → ${pts[pts.length-1].date}` : '';
-        renderLine('chart-votes', vp, '#111');
+        renderLine('chart-votes', vp, '#00E5FF');
         document.getElementById('votes-range').textContent = rangeText(vp);
-        renderLine('chart-unique', up, '#444');
+        renderLine('chart-unique', up, '#FFD166');
         document.getElementById('unique-range').textContent = rangeText(up);
-        renderLine('chart-users', uc, '#000');
+        renderLine('chart-users', uc, '#A78BFA');
         document.getElementById('users-range').textContent = rangeText(uc);
         renderMulti('chart-activity', [
-          {label:'DAU', color:'#000', points:dau},
-          {label:'WAU', color:'#0a84ff', points:wau},
-          {label:'MAU', color:'#d0021b', points:mau}
+          {label:'DAU', color:'#FFFFFF', points:dau},
+          {label:'WAU', color:'#7FDBFF', points:wau},
+          {label:'MAU', color:'#FF6B6B', points:mau}
         ]);
         document.getElementById('activity-range').textContent = rangeText(dau||wau||mau);
       }catch(e){
