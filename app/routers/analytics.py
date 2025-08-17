@@ -28,8 +28,44 @@ def require_moderator(current_user: User = Depends(get_current_user)) -> User:
     raise HTTPException(status_code=403, detail="Moderator access required")
 
 
+from fastapi.responses import RedirectResponse
+from ..oauth2 import get_current_user
+
+
+def _is_moderator(user: User) -> bool:
+    mod_provider = os.getenv("MODERATOR_PROVIDER")
+    mod_id = os.getenv("MODERATOR_PROVIDER_ID")
+    return bool(mod_provider and mod_id and user.provider == mod_provider and str(user.provider_id) == str(mod_id))
+
+
 @router.get("/", response_class=HTMLResponse)
-def analytics_page(request: Request, _: User = Depends(require_moderator)):
+def analytics_page(request: Request, db: Session = Depends(get_db)):
+    # Soft guard with redirects for first-load navigations
+    # Try to get user via header Bearer from JS fetch-once pattern; otherwise try cookie
+    # Reuse get_current_user if Authorization header present; else fall back to cookie manually
+    user = None
+    # Attempt header-based auth using dependency mimic
+    try:
+        user = get_current_user.__wrapped__(request=request, db=db)  # type: ignore
+    except Exception:
+        # Fallback: if not provided or fails, try to read cookie directly
+        token = request.cookies.get("access_token")
+        if token and token.lower().startswith("bearer "):
+            token = token.split(" ", 1)[1]
+        if token:
+            from ..oauth2 import verify_access_token
+            from fastapi import status, HTTPException
+            try:
+                user_id = verify_access_token(token, HTTPException(status_code=401, detail="Invalid token"))
+                user = db.query(User).filter(User.id == user_id).first()
+            except Exception:
+                user = None
+
+    if not user:
+        return RedirectResponse(url="/login", status_code=302)
+    if not _is_moderator(user):
+        return RedirectResponse(url="/categories", status_code=302)
+
     return templates.TemplateResponse("analytics.html", {"request": request})
 
 
