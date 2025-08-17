@@ -9,11 +9,28 @@
             <a href="/leaderboard">Leaderboard</a>
             <a href="/upload">Upload</a>
             <a href="/categories">Categories</a>
+            <a href="/analytics" id="analytics-link" style="border:1px solid #e0e0e0; padding:0.25rem 0.5rem; margin-right:0.5rem; font-family:'Courier New', monospace;">Analytics (moderator)</a>
             <a href="/login" id="auth-link">Login</a>
             <button class="theme-toggle" id="theme-toggle" title="Toggle dark mode">◐</button>
         </nav>
     </header>
 
+    <script>
+    // Hide Analytics link for non-moderators
+    document.addEventListener('DOMContentLoaded', async function(){
+      try{
+        const link = document.getElementById('analytics-link');
+        if(!link) return;
+        const t = localStorage.getItem('token');
+        if(!t){ link.remove(); return; }
+        const res = await fetch('/auth/me', { headers: { 'Authorization': 'Bearer '+t } });
+        if(!res.ok){ link.remove(); return; }
+        const me = await res.json();
+        if(!me.is_moderator) link.remove();
+      }catch(_){ try{ document.getElementById('analytics-link')?.remove(); }catch(e){} }
+    });
+    </script>
+ 
     <div class="stats-section">
         <h2>Your Pseudonym</h2>
         <div style="margin: 1rem 0;">
