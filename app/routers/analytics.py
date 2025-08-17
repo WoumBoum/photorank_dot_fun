@@ -41,28 +41,72 @@ def _is_moderator(user: User) -> bool:
 @router.get("/", response_class=HTMLResponse)
 def analytics_page(request: Request):
     # Publicly renderable HTML (like other pages). JS will gate via API auth.
-    return templates.TemplateResponse("analytics.html", {"request": request})
+    alt_ids = os.getenv("ALT_USER_IDS", "")
+    return templates.TemplateResponse("analytics.html", {"request": request, "alt_user_ids": alt_ids})
 
 
 @router.get("/overview")
-def analytics_overview(db: Session = Depends(get_db), _: User = Depends(require_moderator)) -> Dict[str, int]:
-    # Phase 1 metrics
-    now = func.now()
-    total_users = db.query(func.count(User.id)).scalar() or 0
-    new_users_7d = db.query(func.count(User.id)).filter(User.created_at >= func.now() - func.cast("7 days", type_=func.interval())).scalar() if False else None
-    # SQLAlchemy interval portable approach (Postgres): use text
+def analytics_overview(request: Request, db: Session = Depends(get_db), _: User = Depends(require_moderator)) -> Dict[str, int]:
+    # Parse excluded ids from query or env default
+    def parse_ids(s: str) -> set[int]:
+        ids = set()
+        for part in s.split(',') if s else []:
+            part = part.strip()
+            if part.isdigit():
+                ids.add(int(part))
+        return ids
+    q = request.query_params.get('exclude_user_ids') if hasattr(request, 'query_params') else None
+    excluded = parse_ids(q) if q else parse_ids(os.getenv("ALT_USER_IDS", ""))
+
     from sqlalchemy import text
-    new_users_7d = db.query(func.count(User.id)).filter(User.created_at >= text("now() - interval '7 days'")) .scalar() or 0
-    new_users_30d = db.query(func.count(User.id)).filter(User.created_at >= text("now() - interval '30 days'")) .scalar() or 0
+    # Users
+    total_users_q = db.query(func.count(User.id))
+    if excluded:
+        total_users_q = total_users_q.filter(~User.id.in_(excluded))
+    total_users = total_users_q.scalar() or 0
 
-    total_photos = db.query(func.count(Photo.id)).scalar() or 0
-    new_photos_7d = db.query(func.count(Photo.id)).filter(Photo.created_at >= text("now() - interval '7 days'")) .scalar() or 0
-    new_photos_30d = db.query(func.count(Photo.id)).filter(Photo.created_at >= text("now() - interval '30 days'")) .scalar() or 0
+    new_users_7d_q = db.query(func.count(User.id)).filter(User.created_at >= text("now() - interval '7 days'"))
+    if excluded:
+        new_users_7d_q = new_users_7d_q.filter(~User.id.in_(excluded))
+    new_users_7d = new_users_7d_q.scalar() or 0
 
-    total_votes = db.query(func.count(Vote.id)).scalar() or 0
+    new_users_30d_q = db.query(func.count(User.id)).filter(User.created_at >= text("now() - interval '30 days'"))
+    if excluded:
+        new_users_30d_q = new_users_30d_q.filter(~User.id.in_(excluded))
+    new_users_30d = new_users_30d_q.scalar() or 0
 
-    users_with_uploads_lifetime = db.query(func.count(func.distinct(Photo.owner_id))).scalar() or 0
-    users_with_uploads_30d = db.query(func.count(func.distinct(Photo.owner_id))).filter(Photo.created_at >= text("now() - interval '30 days'")) .scalar() or 0
+    # Photos
+    total_photos_q = db.query(func.count(Photo.id))
+    if excluded:
+        total_photos_q = total_photos_q.filter(~Photo.owner_id.in_(excluded))
+    total_photos = total_photos_q.scalar() or 0
+
+    new_photos_7d_q = db.query(func.count(Photo.id)).filter(Photo.created_at >= text("now() - interval '7 days'"))
+    if excluded:
+        new_photos_7d_q = new_photos_7d_q.filter(~Photo.owner_id.in_(excluded))
+    new_photos_7d = new_photos_7d_q.scalar() or 0
+
+    new_photos_30d_q = db.query(func.count(Photo.id)).filter(Photo.created_at >= text("now() - interval '30 days'"))
+    if excluded:
+        new_photos_30d_q = new_photos_30d_q.filter(~Photo.owner_id.in_(excluded))
+    new_photos_30d = new_photos_30d_q.scalar() or 0
+
+    # Votes
+    total_votes_q = db.query(func.count(Vote.id))
+    if excluded:
+        total_votes_q = total_votes_q.filter(~Vote.user_id.in_(excluded))
+    total_votes = total_votes_q.scalar() or 0
+
+    # Uploaders
+    users_with_uploads_lifetime_q = db.query(func.count(func.distinct(Photo.owner_id)))
+    if excluded:
+        users_with_uploads_lifetime_q = users_with_uploads_lifetime_q.filter(~Photo.owner_id.in_(excluded))
+    users_with_uploads_lifetime = users_with_uploads_lifetime_q.scalar() or 0
+
+    users_with_uploads_30d_q = db.query(func.count(func.distinct(Photo.owner_id))).filter(Photo.created_at >= text("now() - interval '30 days'"))
+    if excluded:
+        users_with_uploads_30d_q = users_with_uploads_30d_q.filter(~Photo.owner_id.in_(excluded))
+    users_with_uploads_30d = users_with_uploads_30d_q.scalar() or 0
 
     rate_limit_hits_7d = 0
     rate_limit_hits_30d = 0
@@ -83,7 +127,7 @@ def analytics_overview(db: Session = Depends(get_db), _: User = Depends(require_
 
 
 @router.get("/time-series")
-def analytics_time_series(db: Session = Depends(get_db), _: User = Depends(require_moderator)):
+def analytics_time_series(request: Request, db: Session = Depends(get_db), _: User = Depends(require_moderator)):
     """Return time-series for:
     - votes/day
     - unique voters/day
