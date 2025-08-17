@@ -80,3 +80,76 @@ def analytics_overview(db: Session = Depends(get_db), _: User = Depends(require_
         "rate_limit_hits_7d": rate_limit_hits_7d,
         "rate_limit_hits_30d": rate_limit_hits_30d,
     }
+
+
+@router.get("/time-series")
+def analytics_time_series(db: Session = Depends(get_db), _: User = Depends(require_moderator)):
+    """Return time-series for votes/day, unique voters/day, cumulative users/day.
+    Dates are YYYY-MM-DD (UTC), contiguous from first data date to today.
+    """
+    from sqlalchemy import text
+    # Find min created_at across users, photos, votes
+    min_user = db.query(func.min(User.created_at)).scalar()
+    min_photo = db.query(func.min(Photo.created_at)).scalar()
+    min_vote = db.query(func.min(Vote.created_at)).scalar()
+
+    min_date = min([d for d in [min_user, min_photo, min_vote] if d is not None], default=None)
+    if min_date is None:
+        # No data yet; return empty series for today
+        today = datetime.utcnow().date()
+        date_str = today.strftime("%Y-%m-%d")
+        empty = [{"date": date_str, "count": 0}]
+        return {
+            "votes_per_day": empty,
+            "unique_voters_per_day": empty,
+            "users_cumulative_per_day": empty,
+        }
+
+    start_date = min_date.date()
+    today = datetime.utcnow().date()
+
+    # Helper: generate date range
+    days = (today - start_date).days
+    full_dates = [start_date + timedelta(days=i) for i in range(days + 1)]
+
+    # votes per day
+    votes_rows = (
+        db.query(func.date_trunc('day', Vote.created_at).label('day'), func.count(Vote.id))
+        .group_by('day')
+        .order_by('day')
+        .all()
+    )
+    votes_map = {r[0].date(): int(r[1]) for r in votes_rows}
+
+    # unique voters per day
+    unique_rows = (
+        db.query(func.date_trunc('day', Vote.created_at).label('day'), func.count(func.distinct(Vote.user_id)))
+        .group_by('day')
+        .order_by('day')
+        .all()
+    )
+    unique_map = {r[0].date(): int(r[1]) for r in unique_rows}
+
+    # users cumulative per day: first get new users per day
+    new_user_rows = (
+        db.query(func.date_trunc('day', User.created_at).label('day'), func.count(User.id))
+        .group_by('day')
+        .order_by('day')
+        .all()
+    )
+    new_user_map = {r[0].date(): int(r[1]) for r in new_user_rows}
+
+    users_cum = []
+    running = 0
+    for d in full_dates:
+        running += new_user_map.get(d, 0)
+        users_cum.append({"date": d.strftime("%Y-%m-%d"), "count": running})
+
+    votes_series = [{"date": d.strftime("%Y-%m-%d"), "count": votes_map.get(d, 0)} for d in full_dates]
+    unique_series = [{"date": d.strftime("%Y-%m-%d"), "count": unique_map.get(d, 0)} for d in full_dates]
+
+    return {
+        "votes_per_day": votes_series,
+        "unique_voters_per_day": unique_series,
+        "users_cumulative_per_day": users_cum,
+    }
