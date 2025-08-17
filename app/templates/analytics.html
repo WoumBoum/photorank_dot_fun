@@ -231,12 +231,6 @@
           return `<g><line x1="${x}" y1="${h-20}" x2="${x}" y2="${h-10}" stroke="rgba(255,255,255,0.12)" stroke-width="1"/>`
                + `<text transform="translate(${x},${y}) rotate(45)" fill="#aaa" font-size="9" text-anchor="start">${p.date}</text></g>`;
         }).join('');
-        const xTicks = series[0].points.map((p,i)=>{
-          const x = (10 + i * xstep2).toFixed(1);
-          const y = (h - 4).toFixed(1);
-          return `<g><line x1="${x}" y1="${h-20}" x2="${x}" y2="${h-10}" stroke="rgba(255,255,255,0.12)" stroke-width="1"/>`
-               + `<text transform="translate(${x},${y}) rotate(45)" fill="#aaa" font-size="9" text-anchor="start">${p.date}</text></g>`;
-        }).join('');
         let svg = `<svg width="${w}" height="${h}">` + yTicks + xTicks;
         for (const s of series) {
           const path = s.points.map((p, i) => (i === 0 ? 'M' : 'L') + (10 + i * xstep).toFixed(1) + ',' + scaleY(p.count).toFixed(1)).join(' ');
