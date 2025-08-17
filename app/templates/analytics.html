@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Analytics</title>
+  <link rel="icon" href="/static/favicon.ico">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@latest/css/pico.min.css">
+  <link rel="stylesheet" href="/static/css/style.css">
+  <style>
+    body { max-width: 1200px; margin: 2rem auto; }
+    table td, table th { white-space: nowrap; }
+    .kpi { font-family: "Courier New", monospace; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Analytics</h1>
+    <section>
+      <h2>Overview</h2>
+      <table role="grid" class="kpi">
+        <thead>
+          <tr>
+            <th>Metric</th>
+            <th>Value</th>
+          </tr>
+        </thead>
+        <tbody id="kpi-body">
+          <tr><td>Total users</td><td id="total_users">—</td></tr>
+          <tr><td>New users (7d)</td><td id="new_users_7d">—</td></tr>
+          <tr><td>New users (30d)</td><td id="new_users_30d">—</td></tr>
+          <tr><td>Total photos</td><td id="total_photos">—</td></tr>
+          <tr><td>New photos (7d)</td><td id="new_photos_7d">—</td></tr>
+          <tr><td>New photos (30d)</td><td id="new_photos_30d">—</td></tr>
+          <tr><td>Total votes</td><td id="total_votes">—</td></tr>
+          <tr><td>Users with ≥1 upload (lifetime)</td><td id="users_with_uploads_lifetime">—</td></tr>
+          <tr><td>Users with ≥1 upload (30d)</td><td id="users_with_uploads_30d">—</td></tr>
+          <tr><td>Rate-limit hits (7d)</td><td id="rate_limit_hits_7d">—</td></tr>
+          <tr><td>Rate-limit hits (30d)</td><td id="rate_limit_hits_30d">—</td></tr>
+        </tbody>
+      </table>
+    </section>
+  </main>
+  <script>
+    (async function(){
+      const token = localStorage.getItem('token');
+      async function fetchJSON(url){
+        const res = await fetch(url, { headers: token ? { 'Authorization': 'Bearer '+token } : {} });
+        if(!res.ok){ throw new Error('HTTP '+res.status); }
+        return res.json();
+      }
+      try{
+        const data = await fetchJSON('/analytics/overview');
+        for(const [k,v] of Object.entries(data)){
+          const el = document.getElementById(k);
+          if(el) el.textContent = v;
+        }
+      }catch(e){
+        const tbody = document.getElementById('kpi-body');
+        tbody.innerHTML = '<tr><td colspan="2"><article role="alert">Failed to load overview. '+(e.message||e)+'</article></td></tr>';
+      }
+    })();
+  </script>
+</body>
+</html>

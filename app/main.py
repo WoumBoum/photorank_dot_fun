@@ -5,7 +5,7 @@ from starlette.middleware.sessions import SessionMiddleware
 from starlette.middleware.trustedhost import TrustedHostMiddleware
 
 from .config import description, title
-from .routers import auth, photos, votes, websocket, users, categories
+from .routers import auth, photos, votes, websocket, users, categories, analytics
 from .utils import get_category_context
 
 app = FastAPI(
@@ -41,6 +41,9 @@ app.include_router(photos.router, prefix="/api")
 app.include_router(votes.router, prefix="/api")
 app.include_router(users.router, prefix="/api")
 app.include_router(categories.router, prefix="/api")
+# Analytics (moderator-only)
+from .routers import analytics as analytics_router
+app.include_router(analytics_router.router)
 # WebSocket endpoint (mounted directly)
 from .routers.websocket import websocket_endpoint
 app.add_api_websocket_route("/ws", websocket_endpoint)
