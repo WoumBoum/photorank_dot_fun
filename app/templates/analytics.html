@@ -1,5 +1,6 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-theme="dark">
+
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -8,11 +9,60 @@
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@latest/css/pico.min.css">
   <link rel="stylesheet" href="/static/css/style.css">
   <style>
-    body { max-width: 1200px; margin: 2rem auto; }
-    table td, table th { white-space: nowrap; }
-    .kpi { font-family: "Courier New", monospace; }
+    /* Force dark page background and readable contrast */
+    :root,
+    html[data-theme="dark"] {
+      --pico-background-color: #000;
+      --pico-color: #fff;
+      --pico-muted-color: #e0e0e0;
+      --pico-primary: #fff;
+      --pico-muted-border-color: #333;
+    }
+
+    body {
+      max-width: 1200px;
+      margin: 2rem auto;
+      background: #000;
+      color: #fff;
+    }
+
+    h1,
+    h2,
+    small {
+      color: #fff;
+    }
+
+    table td,
+    table th {
+      white-space: nowrap;
+    }
+
+    table,
+    thead,
+    tbody,
+    tr,
+    th,
+    td {
+      border-color: #333;
+    }
+
+    .kpi {
+      font-family: "Courier New", monospace;
+    }
+
+    article[role="alert"],
+    article[role="note"] {
+      background: #111;
+      color: #fff;
+      border: 1px solid #333;
+    }
+
+    svg {
+      background: transparent;
+    }
   </style>
 </head>
+
 <body>
   <main>
     <h1>Analytics</h1>
@@ -26,17 +76,50 @@
           </tr>
         </thead>
         <tbody id="kpi-body">
-          <tr><td>Total users</td><td id="total_users">—</td></tr>
-          <tr><td>New users (7d)</td><td id="new_users_7d">—</td></tr>
-          <tr><td>New users (30d)</td><td id="new_users_30d">—</td></tr>
-          <tr><td>Total photos</td><td id="total_photos">—</td></tr>
-          <tr><td>New photos (7d)</td><td id="new_photos_7d">—</td></tr>
-          <tr><td>New photos (30d)</td><td id="new_photos_30d">—</td></tr>
-          <tr><td>Total votes</td><td id="total_votes">—</td></tr>
-          <tr><td>Users with ≥1 upload (lifetime)</td><td id="users_with_uploads_lifetime">—</td></tr>
-          <tr><td>Users with ≥1 upload (30d)</td><td id="users_with_uploads_30d">—</td></tr>
-          <tr><td>Rate-limit hits (7d)</td><td id="rate_limit_hits_7d">—</td></tr>
-          <tr><td>Rate-limit hits (30d)</td><td id="rate_limit_hits_30d">—</td></tr>
+          <tr>
+            <td>Total users</td>
+            <td id="total_users">—</td>
+          </tr>
+          <tr>
+            <td>New users (7d)</td>
+            <td id="new_users_7d">—</td>
+          </tr>
+          <tr>
+            <td>New users (30d)</td>
+            <td id="new_users_30d">—</td>
+          </tr>
+          <tr>
+            <td>Total photos</td>
+            <td id="total_photos">—</td>
+          </tr>
+          <tr>
+            <td>New photos (7d)</td>
+            <td id="new_photos_7d">—</td>
+          </tr>
+          <tr>
+            <td>New photos (30d)</td>
+            <td id="new_photos_30d">—</td>
+          </tr>
+          <tr>
+            <td>Total votes</td>
+            <td id="total_votes">—</td>
+          </tr>
+          <tr>
+            <td>Users with ≥1 upload (lifetime)</td>
+            <td id="users_with_uploads_lifetime">—</td>
+          </tr>
+          <tr>
+            <td>Users with ≥1 upload (30d)</td>
+            <td id="users_with_uploads_30d">—</td>
+          </tr>
+          <tr>
+            <td>Rate-limit hits (7d)</td>
+            <td id="rate_limit_hits_7d">—</td>
+          </tr>
+          <tr>
+            <td>Rate-limit hits (30d)</td>
+            <td id="rate_limit_hits_30d">—</td>
+          </tr>
         </tbody>
       </table>
     </section>
@@ -66,94 +149,120 @@
     </section>
   </main>
   <script>
-    (async function(){
+    (async function () {
       const token = localStorage.getItem('token');
-      if(!token){ window.location.replace('/login'); return; }
-      async function fetchJSON(url){
-        const res = await fetch(url, { headers: { 'Authorization': 'Bearer '+token } });
-        if(res.status === 401){ window.location.replace('/login'); return Promise.reject('401'); }
-        if(res.status === 403){ window.location.replace('/categories'); return Promise.reject('403'); }
-        if(!res.ok){ throw new Error('HTTP '+res.status); }
+      if (!token) { window.location.replace('/login'); return; }
+      async function fetchJSON(url) {
+        const res = await fetch(url, { headers: { 'Authorization': 'Bearer ' + token } });
+        if (res.status === 401) { window.location.replace('/login'); return Promise.reject('401'); }
+        if (res.status === 403) { window.location.replace('/categories'); return Promise.reject('403'); }
+        if (!res.ok) { throw new Error('HTTP ' + res.status); }
         return res.json();
       }
-      function renderLine(containerId, points, stroke, height=160){
+      function renderLine(containerId, points, stroke, height = 180) {
         const el = document.getElementById(containerId);
-        if(!el){ return; }
-        if(!points || points.length === 0){ el.innerHTML = '<article role="note">No data yet</article>'; return; }
+        if (!el) { return; }
+        if (!points || points.length === 0) { el.innerHTML = '<article role="note">No data yet</article>'; return; }
         const w = el.clientWidth || 1000;
         const h = height;
-        const xs = points.map((p,i)=>i);
-        const ys = points.map(p=>p.count);
+        const xs = points.map((p, i) => i);
+        const ys = points.map(p => p.count);
         const maxY = Math.max(1, ...ys);
         const minY = 0;
-        const xstep = xs.length>1 ? (w-20)/(xs.length-1) : 0;
-        const scaleY = v => h - 10 - (v-minY) * (h-20) / (maxY-minY||1);
-        const path = points.map((p,i)=> (i===0? 'M':'L') + (10+i*xstep).toFixed(1) + ',' + scaleY(p.count).toFixed(1)).join(' ');
-        const last = points[points.length-1];
-        el.innerHTML = `<svg width="${w}" height="${h}"><path d="${path}" fill="none" stroke="${stroke}" stroke-width="2"/></svg>` +
-          `<small class="kpi">Last: ${last.count}</small>`;
+        const xstep = xs.length > 1 ? (w - 20) / (xs.length - 1) : 0;
+        const scaleY = v => h - 10 - (v - minY) * (h - 20) / (maxY - minY || 1);
+        const path = points.map((p, i) => (i === 0 ? 'M' : 'L') + (10 + i * xstep).toFixed(1) + ',' + scaleY(p.count).toFixed(1)).join(' ');
+        const gridLines = (() => {
+          const lines = [];
+          const steps = 4;
+          for (let i = 0; i <= steps; i++) {
+            const yv = (maxY / steps) * i;
+            const y = scaleY(yv).toFixed(1);
+            lines.push(`<line x1="10" y1="${y}" x2="${w - 10}" y2="${y}" stroke="rgba(255,255,255,0.08)" stroke-width="1"/>`);
+          }
+          return lines.join('');
+        })();
+        const last = points[points.length - 1];
+        el.innerHTML = `<svg width="${w}" height="${h}">`
+          + gridLines
+          + `<path d="${path}" fill="none" stroke="rgba(255,255,255,0.12)" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>`
+          + `<path d="${path}" fill="none" stroke="${stroke}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>`
+          + `</svg>`
+          + `<small class="kpi">Last: ${last.count}</small>`;
       }
-      function renderMulti(containerId, series, height=160){
+      function renderMulti(containerId, series, height = 180) {
         const el = document.getElementById(containerId);
-        if(!el){ return; }
+        if (!el) { return; }
         const w = el.clientWidth || 1000;
         const h = height;
-        const allPoints = series.flatMap(s=>s.points);
-        if(allPoints.length===0){ el.innerHTML = '<article role="note">No data yet</article>'; return; }
-        const maxY = Math.max(1, ...allPoints.map(p=>p.count));
+        const allPoints = series.flatMap(s => s.points);
+        if (allPoints.length === 0) { el.innerHTML = '<article role="note">No data yet</article>'; return; }
+        const maxY = Math.max(1, ...allPoints.map(p => p.count));
         const minY = 0;
         const N = series[0].points.length;
-        const xstep = N>1 ? (w-20)/(N-1) : 0;
-        const scaleY = v => h - 10 - (v-minY) * (h-20) / (maxY-minY||1);
-        let svg = `<svg width="${w}" height="${h}">`;
-        for(const s of series){
-          const path = s.points.map((p,i)=> (i===0? 'M':'L') + (10+i*xstep).toFixed(1) + ',' + scaleY(p.count).toFixed(1)).join(' ');
-          svg += `<path d="${path}" fill="none" stroke="${s.color}" stroke-width="2"/>`;
+        const xstep = N > 1 ? (w - 20) / (N - 1) : 0;
+        const scaleY = v => h - 10 - (v - minY) * (h - 20) / (maxY - minY || 1);
+        const gridLines = (() => {
+          const lines = [];
+          const steps = 4;
+          for (let i = 0; i <= steps; i++) {
+            const yv = (maxY / steps) * i;
+            const y = scaleY(yv).toFixed(1);
+            lines.push(`<line x1="10" y1="${y}" x2="${w - 10}" y2="${y}" stroke="rgba(255,255,255,0.08)" stroke-width="1"/>`);
+          }
+          return lines.join('');
+        })();
+        let svg = `<svg width="${w}" height="${h}">` + gridLines;
+        for (const s of series) {
+          const path = s.points.map((p, i) => (i === 0 ? 'M' : 'L') + (10 + i * xstep).toFixed(1) + ',' + scaleY(p.count).toFixed(1)).join(' ');
+          svg += `<path d="${path}" fill="none" stroke="rgba(255,255,255,0.12)" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>`;
+          svg += `<path d="${path}" fill="none" stroke="${s.color}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>`;
         }
         svg += '</svg>';
-        const legend = series.map(s=>`<span style="color:${s.color}">${s.label}</span>`).join(' · ');
+        const legend = series.map(s => `<span style="color:${s.color}">${s.label}</span>`).join(' · ');
         el.innerHTML = svg + `<div class="kpi">${legend}</div>`;
       }
-      try{
+      try {
         const overview = await fetchJSON('/analytics/overview');
-        if(overview){
-          for(const [k,v] of Object.entries(overview)){
+        if (overview) {
+          for (const [k, v] of Object.entries(overview)) {
             const el = document.getElementById(k);
-            if(el) el.textContent = v;
+            if (el) el.textContent = v;
           }
         }
-      }catch(e){
+      } catch (e) {
         const tbody = document.getElementById('kpi-body');
-        tbody.innerHTML = '<tr><td colspan="2"><article role="alert">Failed to load overview. '+(e.message||e)+'</article></td></tr>';
+        tbody.innerHTML = '<tr><td colspan="2"><article role="alert">Failed to load overview. ' + (e.message || e) + '</article></td></tr>';
       }
       // Time-series
-      try{
+      try {
         const series = await fetchJSON('/analytics/time-series');
-        if(!series) return;
+        if (!series) return;
         const vp = series.votes_per_day || [];
         const up = series.unique_voters_per_day || [];
         const uc = series.users_cumulative_per_day || [];
         const dau = series.dau_per_day || [];
         const wau = series.wau_per_day || [];
         const mau = series.mau_per_day || [];
-        const rangeText = pts => pts.length? `${pts[0].date} → ${pts[pts.length-1].date}` : '';
-        renderLine('chart-votes', vp, '#111');
+        const rangeText = pts => pts.length ? `${pts[0].date} → ${pts[pts.length - 1].date}` : '';
+        renderLine('chart-votes', vp, '#00E5FF');
         document.getElementById('votes-range').textContent = rangeText(vp);
-        renderLine('chart-unique', up, '#444');
+        renderLine('chart-unique', up, '#FFD166');
         document.getElementById('unique-range').textContent = rangeText(up);
-        renderLine('chart-users', uc, '#000');
+        renderLine('chart-users', uc, '#A78BFA');
         document.getElementById('users-range').textContent = rangeText(uc);
         renderMulti('chart-activity', [
-          {label:'DAU', color:'#000', points:dau},
-          {label:'WAU', color:'#0a84ff', points:wau},
-          {label:'MAU', color:'#d0021b', points:mau}
+          { label: 'DAU', color: '#FFFFFF', points: dau },
+          { label: 'WAU', color: '#7FDBFF', points: wau },
+          { label: 'MAU', color: '#FF6B6B', points: mau }
         ]);
-        document.getElementById('activity-range').textContent = rangeText(dau||wau||mau);
-      }catch(e){
-        const addAlert = (id)=>{ const el = document.getElementById(id); if(el) el.innerHTML = '<article role="alert">Failed to load series.</article>'; };
+        document.getElementById('activity-range').textContent = rangeText(dau || wau || mau);
+      } catch (e) {
+        const addAlert = (id) => { const el = document.getElementById(id); if (el) el.innerHTML = '<article role="alert">Failed to load series.</article>'; };
         addAlert('chart-votes'); addAlert('chart-unique'); addAlert('chart-users'); addAlert('chart-activity');
       }
     })();
   </script>
 </body>
+
 </html>
