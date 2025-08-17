@@ -32,6 +32,7 @@
       <label style="display:flex;align-items:center;gap:0.5rem;font-size:0.9rem;">
         <input type="checkbox" id="toggle-hide-alt">
         <span>Hide alt activity</span>
+        <small id="alt-ids-display" class="kpi" style="opacity:.8;"></small>
       </label>
     </h1>
     <section>
@@ -94,6 +95,8 @@
       const altIds = (storedAlt || defaultAlt).trim();
       const toggle = document.getElementById('toggle-hide-alt');
       if(toggle){ toggle.checked = hideAltPref; }
+      function setAltDisplay(ids){ const el = document.getElementById('alt-ids-display'); if(el){ el.textContent = ids ? `(${ids})` : '(none)'; } }
+      setAltDisplay(altIds);
       function withAlt(url){
         if(!toggle || !toggle.checked || !altIds){ return url; }
         const u = new URL(url, window.location.origin);
