@@ -66,6 +66,10 @@
 <body>
   <main>
     <h1>Analytics</h1>
+    <label style="display:flex;align-items:center;gap:.5rem;margin:.5rem 0;">
+      <input type="checkbox" id="hideAlts" checked>
+      <span>Hide alt users</span>
+    </label>
     <section>
       <h2>Overview</h2>
       <table role="grid" class="kpi">
@@ -222,8 +226,18 @@
         const legend = series.map(s => `<span style="color:${s.color}">${s.label}</span>`).join(' · ');
         el.innerHTML = svg + `<div class="kpi">${legend}</div>`;
       }
+      const params = new URLSearchParams(window.location.search);
+      const hideAltsParam = params.get('hide_alts');
+      const hideAlts = hideAltsParam === null ? true : hideAltsParam !== 'false';
+      document.getElementById('hideAlts').checked = hideAlts;
+      document.getElementById('hideAlts').addEventListener('change', () => {
+        const p = new URLSearchParams(window.location.search);
+        p.set('hide_alts', document.getElementById('hideAlts').checked ? 'true' : 'false');
+        window.location.search = p.toString();
+      });
+      const q = '?'+ new URLSearchParams({ hide_alts: hideAlts ? 'true' : 'false' }).toString();
       try {
-        const overview = await fetchJSON('/analytics/overview');
+        const overview = await fetchJSON('/analytics/overview' + q);
         if (overview) {
           for (const [k, v] of Object.entries(overview)) {
             const el = document.getElementById(k);
@@ -236,7 +250,7 @@
       }
       // Time-series
       try {
-        const series = await fetchJSON('/analytics/time-series');
+        const series = await fetchJSON('/analytics/time-series' + q);
         if (!series) return;
         const vp = series.votes_per_day || [];
         const up = series.unique_voters_per_day || [];

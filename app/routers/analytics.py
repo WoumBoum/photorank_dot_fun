@@ -45,15 +45,27 @@ def analytics_page(request: Request):
 
 
 @router.get("/overview")
-def analytics_overview(db: Session = Depends(get_db), _: User = Depends(require_moderator)) -> Dict[str, int]:
+def analytics_overview(request: Request, db: Session = Depends(get_db), _: User = Depends(require_moderator)) -> Dict[str, int]:
     # Phase 1 metrics
     now = func.now()
-    total_users = db.query(func.count(User.id)).scalar() or 0
+    hide_alts = request.query_params.get('hide_alts', 'true').lower() != 'false'
+    alt_ids_env = os.getenv('ALT_USER_IDS', '')
+    alt_ids = [int(x) for x in alt_ids_env.split(',') if x.strip().isdigit()]
+
+    user_query = db.query(func.count(User.id))
+    if hide_alts and alt_ids:
+        user_query = user_query.filter(~User.id.in_(alt_ids))
+    total_users = user_query.scalar() or 0
     new_users_7d = db.query(func.count(User.id)).filter(User.created_at >= func.now() - func.cast("7 days", type_=func.interval())).scalar() if False else None
     # SQLAlchemy interval portable approach (Postgres): use text
     from sqlalchemy import text
-    new_users_7d = db.query(func.count(User.id)).filter(User.created_at >= text("now() - interval '7 days'")) .scalar() or 0
-    new_users_30d = db.query(func.count(User.id)).filter(User.created_at >= text("now() - interval '30 days'")) .scalar() or 0
+    new_users_7d_q = db.query(func.count(User.id)).filter(User.created_at >= text("now() - interval '7 days'"))
+    new_users_30d_q = db.query(func.count(User.id)).filter(User.created_at >= text("now() - interval '30 days'"))
+    if hide_alts and alt_ids:
+        new_users_7d_q = new_users_7d_q.filter(~User.id.in_(alt_ids))
+        new_users_30d_q = new_users_30d_q.filter(~User.id.in_(alt_ids))
+    new_users_7d = new_users_7d_q.scalar() or 0
+    new_users_30d = new_users_30d_q.scalar() or 0
 
     total_photos = db.query(func.count(Photo.id)).scalar() or 0
     new_photos_7d = db.query(func.count(Photo.id)).filter(Photo.created_at >= text("now() - interval '7 days'")) .scalar() or 0
@@ -61,8 +73,13 @@ def analytics_overview(db: Session = Depends(get_db), _: User = Depends(require_
 
     total_votes = db.query(func.count(Vote.id)).scalar() or 0
 
-    users_with_uploads_lifetime = db.query(func.count(func.distinct(Photo.owner_id))).scalar() or 0
-    users_with_uploads_30d = db.query(func.count(func.distinct(Photo.owner_id))).filter(Photo.created_at >= text("now() - interval '30 days'")) .scalar() or 0
+    u_life_q = db.query(func.count(func.distinct(Photo.owner_id)))
+    u_30_q = db.query(func.count(func.distinct(Photo.owner_id))).filter(Photo.created_at >= text("now() - interval '30 days'"))
+    if hide_alts and alt_ids:
+        u_life_q = u_life_q.filter(~Photo.owner_id.in_(alt_ids))
+        u_30_q = u_30_q.filter(~Photo.owner_id.in_(alt_ids))
+    users_with_uploads_lifetime = u_life_q.scalar() or 0
+    users_with_uploads_30d = u_30_q.scalar() or 0
 
     rate_limit_hits_7d = 0
     rate_limit_hits_30d = 0
@@ -83,7 +100,7 @@ def analytics_overview(db: Session = Depends(get_db), _: User = Depends(require_
 
 
 @router.get("/time-series")
-def analytics_time_series(db: Session = Depends(get_db), _: User = Depends(require_moderator)):
+def analytics_time_series(request: Request, db: Session = Depends(get_db), _: User = Depends(require_moderator)):
     """Return time-series for:
     - votes/day
     - unique voters/day
@@ -118,9 +135,16 @@ def analytics_time_series(db: Session = Depends(get_db), _: User = Depends(requi
     days = (today - start_date).days
     full_dates = [start_date + timedelta(days=i) for i in range(days + 1)]
 
+    hide_alts = request.query_params.get('hide_alts', 'true').lower() != 'false'
+    alt_ids_env = os.getenv('ALT_USER_IDS', '')
+    alt_ids = [int(x) for x in alt_ids_env.split(',') if x.strip().isdigit()]
+
     # votes per day
+    vote_q = db.query(func.date_trunc('day', Vote.created_at).label('day'), func.count(Vote.id))
+    if hide_alts and alt_ids:
+        vote_q = vote_q.filter(~Vote.user_id.in_(alt_ids))
     votes_rows = (
-        db.query(func.date_trunc('day', Vote.created_at).label('day'), func.count(Vote.id))
+        vote_q
         .group_by('day')
         .order_by('day')
         .all()
@@ -128,8 +152,11 @@ def analytics_time_series(db: Session = Depends(get_db), _: User = Depends(requi
     votes_map = {r[0].date(): int(r[1]) for r in votes_rows}
 
     # unique voters per day
+    unique_q = db.query(func.date_trunc('day', Vote.created_at).label('day'), func.count(func.distinct(Vote.user_id)))
+    if hide_alts and alt_ids:
+        unique_q = unique_q.filter(~Vote.user_id.in_(alt_ids))
     unique_rows = (
-        db.query(func.date_trunc('day', Vote.created_at).label('day'), func.count(func.distinct(Vote.user_id)))
+        unique_q
         .group_by('day')
         .order_by('day')
         .all()
@@ -155,8 +182,11 @@ def analytics_time_series(db: Session = Depends(get_db), _: User = Depends(requi
     unique_series = [{"date": d.strftime("%Y-%m-%d"), "count": unique_map.get(d, 0)} for d in full_dates]
 
     # Activity sets per day: users who voted or uploaded
+    vote_user_q = db.query(func.date_trunc('day', Vote.created_at).label('day'), Vote.user_id)
+    if hide_alts and alt_ids:
+        vote_user_q = vote_user_q.filter(~Vote.user_id.in_(alt_ids))
     vote_user_rows = (
-        db.query(func.date_trunc('day', Vote.created_at).label('day'), Vote.user_id)
+        vote_user_q
         .all()
     )
     upload_user_rows = (
