@@ -527,3 +527,27 @@ nav {
 /* Subtle category meta line matching vote-count styling */
 .category-meta-line { line-height: 1.2; }
 .category-meta-line .divider { color: #ccc; }
+
+/* Analytics and general surfaces: avoid white-on-white */
+:root {
+    --surface: #f5f5f5;
+    --surface-alt: #efefef;
+}
+
+body { background-color: var(--bg-color); }
+
+section, article, aside, main, header, footer, nav, .container { background: transparent; }
+
+table { background: transparent; border-collapse: collapse; }
+
+table th, table td { background: transparent; border-bottom: 1px solid var(--border-color); }
+
+figure { background: transparent; border: 1px solid var(--border-color); }
+
+.card, .box, .panel { background: var(--surface); border: 1px solid var(--border-color); }
+
+input, select, textarea { background: var(--surface); border: 1px solid var(--border-color); color: var(--text-color); }
+
+button, .btn, a.button { background: var(--button-bg); color: var(--button-text); border: 1px solid var(--text-color); }
+
+a { color: var(--text-color); }
