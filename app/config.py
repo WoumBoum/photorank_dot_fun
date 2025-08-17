@@ -2,6 +2,8 @@ from pydantic import BaseSettings
 
 
 class Settings(BaseSettings):
+    # Comma-separated user IDs considered alts/bots
+    alt_user_ids: str = __import__("os").getenv("ALT_USER_IDS", "")
     # Database (provide test-friendly defaults; override in real env)
     database_name: str = "test_db"
     database_hostname: str = "localhost"

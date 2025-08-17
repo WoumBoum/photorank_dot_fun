@@ -30,6 +30,9 @@
     <h1>Analytics</h1>
     <section>
       <h2>Overview</h2>
+      <label style="display:flex;align-items:center;gap:.5rem;margin:.5rem 0">
+        <input type="checkbox" id="includeAlts"> Include alt users
+      </label>
       <table role="grid" class="kpi">
         <thead>
           <tr>
@@ -152,7 +155,15 @@
         el.innerHTML = svg + `<div class="kpi">${legend}</div>`;
       }
       try{
-        const overview = await fetchJSON('/analytics/overview');
+        const includeAlts = (new URLSearchParams(location.search)).get('include_alts')==='1';
+        document.getElementById('includeAlts').checked = includeAlts;
+        document.getElementById('includeAlts').addEventListener('change', ()=>{
+          const params = new URLSearchParams(location.search);
+          if(document.getElementById('includeAlts').checked){ params.set('include_alts','1'); } else { params.delete('include_alts'); }
+          location.search = params.toString();
+        });
+        const qs = includeAlts? '?include_alts=1' : '';
+        const overview = await fetchJSON('/analytics/overview'+qs);
         if(overview){
           for(const [k,v] of Object.entries(overview)){
             const el = document.getElementById(k);
@@ -165,7 +176,7 @@
       }
       // Time-series
       try{
-        const series = await fetchJSON('/analytics/time-series');
+        const series = await fetchJSON('/analytics/time-series'+qs);
         if(!series) return;
         const vp = series.votes_per_day || [];
         const up = series.unique_voters_per_day || [];

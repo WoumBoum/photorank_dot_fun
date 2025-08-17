@@ -45,10 +45,29 @@ def analytics_page(request: Request):
 
 
 @router.get("/overview")
-def analytics_overview(db: Session = Depends(get_db), _: User = Depends(require_moderator)) -> Dict[str, int]:
+def analytics_overview(request: Request, db: Session = Depends(get_db), _: User = Depends(require_moderator)) -> Dict[str, int]:
+    # Parse alt user IDs and include_alts toggle
+    include_alts = request.query_params.get('include_alts', '0') in ('1','true','yes','on')
+    from ..config import settings
+    def parse_alt_ids(s: str):
+        ids = []
+        for part in s.split(',') if s else []:
+            part = part.strip()
+            if not part:
+                continue
+            try:
+                ids.append(int(part))
+            except ValueError:
+                continue
+        return ids
+    alt_ids = parse_alt_ids(settings.alt_user_ids)
+
     # Phase 1 metrics
     now = func.now()
-    total_users = db.query(func.count(User.id)).scalar() or 0
+    base_users = db.query(User.id)
+    if not include_alts and alt_ids:
+        base_users = base_users.filter(~User.id.in_(alt_ids))
+    total_users = base_users.count() or 0
     new_users_7d = db.query(func.count(User.id)).filter(User.created_at >= func.now() - func.cast("7 days", type_=func.interval())).scalar() if False else None
     # SQLAlchemy interval portable approach (Postgres): use text
     from sqlalchemy import text
@@ -83,7 +102,7 @@ def analytics_overview(db: Session = Depends(get_db), _: User = Depends(require_
 
 
 @router.get("/time-series")
-def analytics_time_series(db: Session = Depends(get_db), _: User = Depends(require_moderator)):
+def analytics_time_series(request: Request, db: Session = Depends(get_db), _: User = Depends(require_moderator)):
     """Return time-series for:
     - votes/day
     - unique voters/day
