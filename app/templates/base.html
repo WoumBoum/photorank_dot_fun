@@ -20,6 +20,11 @@
     </script>
 </head>
 <body>
+    <div class="top-logo">
+        <a href="/" aria-label="PhotoRank Home">
+            <img src="{{ url_for('static', path='/top_logo_photorank.png') }}" alt="PhotoRank" />
+        </a>
+    </div>
     <main>
         {% block content %}{% endblock %}
     </main>
