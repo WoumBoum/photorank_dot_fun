@@ -233,9 +233,12 @@
                                 const blob = await resp.blob();
                                 const dataUrl = await new Promise((resolve) => { const fr = new FileReader(); fr.onload = () => resolve(fr.result); fr.readAsDataURL(blob); });
                                 logoImg.removeAttribute('srcset');
+                                logoImg.loading = 'eager';
                                 logoImg.crossOrigin = 'anonymous';
                                 logoImg.src = dataUrl;
                                 if (logoImg.decode) { try { await logoImg.decode(); } catch(_){} }
+                                await new Promise(r => requestAnimationFrame(r));
+                                await new Promise(r => setTimeout(r, 0));
                             }
                         }
                     } catch(_) {}
