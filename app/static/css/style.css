@@ -230,9 +230,8 @@ nav {
 .photo-card img {
     display: block;
     width: 100%;
-    max-height: 300px;
-    height: auto;
-    /* align with stats image box while preserving aspect */
+    height: 300px;
+    /* align with stats image height */
     object-fit: contain;
     border: 1px solid var(--border-color);
     margin-bottom: auto;
@@ -323,8 +322,7 @@ nav {
 
 .stat-card img {
     width: 100%;
-    max-height: 300px;
-    height: auto;
+    height: 300px;
     object-fit: contain;
     margin-bottom: auto;
     border: 1px solid var(--border-color);
@@ -340,8 +338,7 @@ nav {
 
 .stat-card img {
     width: 100%;
-    max-height: 300px;
-    height: auto;
+    height: 300px;
     object-fit: contain;
     margin-bottom: auto;
     border: 1px solid #e0e0e0;

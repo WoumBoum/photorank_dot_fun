@@ -220,7 +220,17 @@
                     const target = document.body; // include top logo and everything
                     if (!target || typeof html2canvas === 'undefined') return;
                     // Ensure all imgs use CORS-friendly mode (logo + grid images)
-                    document.querySelectorAll('img').forEach(img => { try { img.crossOrigin = 'anonymous'; } catch(_){} });
+                    const imgs = Array.from(document.querySelectorAll('img'));
+                    imgs.forEach(img => { try { img.crossOrigin = 'anonymous'; } catch(_){} });
+                    // Freeze on-screen sizes to avoid stretch in rasterization
+                    const originals = new Map();
+                    imgs.forEach(img => {
+                        const rect = img.getBoundingClientRect();
+                        originals.set(img, img.getAttribute('style'));
+                        img.style.width = rect.width + 'px';
+                        img.style.height = rect.height + 'px';
+                        img.style.objectFit = getComputedStyle(img).objectFit || 'contain';
+                    });
                     const doc = document.documentElement;
                     const fullW = Math.max(doc.scrollWidth, doc.clientWidth);
                     const fullH = Math.max(doc.scrollHeight, doc.clientHeight);
@@ -234,6 +244,10 @@
                         windowWidth: fullW,
                         windowHeight: fullH,
                         scale: window.devicePixelRatio || 2
+                    });
+                    // Restore original inline styles
+                    originals.forEach((style, img) => {
+                        if (style === null) img.removeAttribute('style'); else img.setAttribute('style', style);
                     });
                     const dataUrl = canvas.toDataURL('image/png');
                     const a = document.createElement('a');
