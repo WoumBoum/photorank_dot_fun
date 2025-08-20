@@ -18,32 +18,32 @@
         <h2 id="category-question">Results of:</h2>
         <div id="category-vote-count" style="margin-top:6px;color:#666;font-size:0.95em;"></div>
         <div style="text-align:center;margin:10px 0 20px 0;">
-            <button id="download-leaderboard" class="btn">📸 Screen current leaderboard</button>
+            <button id="download-leaderboard" class="btn">Screen current leaderboard</button>
         </div>
         <div class="current-category">
             {% if category_name %}
             <span>Category: <strong id="cat-name-display">{{ category_name }}</strong></span>
             <div id="cat-edit-controls" style="display:none;margin-top:6px;gap:8px;">
-              <button id="edit-cat-name" class="btn" style="padding:4px 8px;">Edit name</button>
-              <button id="edit-cat-question" class="btn" style="padding:4px 8px;">Edit question</button>
+                <button id="edit-cat-name" class="btn" style="padding:4px 8px;">Edit name</button>
+                <button id="edit-cat-question" class="btn" style="padding:4px 8px;">Edit question</button>
             </div>
             <a href="/categories" style="margin-left: 10px; font-size: 0.9em;">All Categories</a>
             <div class="category-meta-line" style="margin-top:4px;color:#666;font-size:0.95em;">
-              <span class="brand">photorank.fun</span>
-              <span class="divider" style="color:#ccc;">·</span>
-              <span class="tagline">disagree? cope harder or actually vote</span>
+                <span class="brand">photorank.fun</span>
+                <span class="divider" style="color:#ccc;">·</span>
+                <span class="tagline">disagree? cope harder or actually vote</span>
             </div>
             {% elif selected_category_name %}
             <span>Showing: <strong id="cat-name-display">{{ selected_category_name }}</strong></span>
             <div id="cat-edit-controls" style="display:none;margin-top:6px;gap:8px;">
-              <button id="edit-cat-name" class="btn" style="padding:4px 8px;">Edit name</button>
-              <button id="edit-cat-question" class="btn" style="padding:4px 8px;">Edit question</button>
+                <button id="edit-cat-name" class="btn" style="padding:4px 8px;">Edit name</button>
+                <button id="edit-cat-question" class="btn" style="padding:4px 8px;">Edit question</button>
             </div>
             <a href="/categories" style="margin-left: 10px; font-size: 0.9em;">Change Category</a>
             <div class="category-meta-line" style="margin-top:4px;color:#666;font-size:0.95em;">
-              <span class="brand">photorank.fun</span>
-              <span class="divider" style="color:#ccc;">·</span>
-              <span class="tagline">disagree? cope harder or actually vote</span>
+                <span class="brand">photorank.fun</span>
+                <span class="divider" style="color:#ccc;">·</span>
+                <span class="tagline">disagree? cope harder or actually vote</span>
             </div>
             {% else %}
             <span>No category selected</span>
@@ -97,56 +97,56 @@
                     }
                 } catch (e) { /* ignore */ }
                 const catData = await (await fetch('/api/categories/' + cat.category_id)).json();
-                 if (catData && catData.question) document.getElementById('category-question').textContent = `Results of: ${catData.question}`;
-                 // Setup edit controls visibility and actions
-                 try {
-                   const token = localStorage.getItem('token');
-                   if (token) {
-                     const meRes = await fetch('/api/users/me', { headers: { Authorization: 'Bearer ' + token } });
-                     if (meRes.ok) {
-                       const me = await meRes.json();
-                       const detailsList = await (await fetch('/api/categories/details?t=' + Date.now())).json();
-                       const det = detailsList.find(x => x.name === categoryName);
-                       const isOwner = me && det && det.owner_id && me.id === det.owner_id;
-                       const isModerator = me && me.is_moderator;
-                       if (isOwner || isModerator) {
-                         const ctrl = document.getElementById('cat-edit-controls');
-                         if (ctrl) ctrl.style.display = 'flex';
-                         const editNameBtn = document.getElementById('edit-cat-name');
-                         const editQBtn = document.getElementById('edit-cat-question');
-                         if (editNameBtn) editNameBtn.onclick = async () => {
-                           const current = document.getElementById('cat-name-display')?.textContent || categoryName;
-                           const input = prompt('New category name:', current);
-                           if (!input || input.trim() === current) return;
-                           const res = await fetch(`/api/categories/${cat.category_id}`, {
-                             method: 'PATCH',
-                             headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
-                             body: JSON.stringify({ name: input.trim() })
-                           });
-                           const data = await res.json().catch(()=>({detail:'Failed'}));
-                           if (!res.ok) { alert(data.detail || 'Failed'); return; }
-                           document.getElementById('cat-name-display').textContent = data.name;
-                           location.reload();
-                         };
-                         if (editQBtn) editQBtn.onclick = async () => {
-                           const currentQ = (catData && catData.question) || '';
-                           const input = prompt('New question:', currentQ);
-                           if (input === null) return;
-                           const trimmed = input.trim();
-                           if (!trimmed || trimmed === currentQ) return;
-                           const res = await fetch(`/api/categories/${cat.category_id}`, {
-                             method: 'PATCH',
-                             headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
-                             body: JSON.stringify({ question: trimmed })
-                           });
-                           const data = await res.json().catch(()=>({detail:'Failed'}));
-                           if (!res.ok) { alert(data.detail || 'Failed'); return; }
-                           document.getElementById('category-question').textContent = `Results of: ${data.question}`;
-                         };
-                       }
-                     }
-                   }
-                 } catch (e) { /* ignore */ }
+                if (catData && catData.question) document.getElementById('category-question').textContent = `Results of: ${catData.question}`;
+                // Setup edit controls visibility and actions
+                try {
+                    const token = localStorage.getItem('token');
+                    if (token) {
+                        const meRes = await fetch('/api/users/me', { headers: { Authorization: 'Bearer ' + token } });
+                        if (meRes.ok) {
+                            const me = await meRes.json();
+                            const detailsList = await (await fetch('/api/categories/details?t=' + Date.now())).json();
+                            const det = detailsList.find(x => x.name === categoryName);
+                            const isOwner = me && det && det.owner_id && me.id === det.owner_id;
+                            const isModerator = me && me.is_moderator;
+                            if (isOwner || isModerator) {
+                                const ctrl = document.getElementById('cat-edit-controls');
+                                if (ctrl) ctrl.style.display = 'flex';
+                                const editNameBtn = document.getElementById('edit-cat-name');
+                                const editQBtn = document.getElementById('edit-cat-question');
+                                if (editNameBtn) editNameBtn.onclick = async () => {
+                                    const current = document.getElementById('cat-name-display')?.textContent || categoryName;
+                                    const input = prompt('New category name:', current);
+                                    if (!input || input.trim() === current) return;
+                                    const res = await fetch(`/api/categories/${cat.category_id}`, {
+                                        method: 'PATCH',
+                                        headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
+                                        body: JSON.stringify({ name: input.trim() })
+                                    });
+                                    const data = await res.json().catch(() => ({ detail: 'Failed' }));
+                                    if (!res.ok) { alert(data.detail || 'Failed'); return; }
+                                    document.getElementById('cat-name-display').textContent = data.name;
+                                    location.reload();
+                                };
+                                if (editQBtn) editQBtn.onclick = async () => {
+                                    const currentQ = (catData && catData.question) || '';
+                                    const input = prompt('New question:', currentQ);
+                                    if (input === null) return;
+                                    const trimmed = input.trim();
+                                    if (!trimmed || trimmed === currentQ) return;
+                                    const res = await fetch(`/api/categories/${cat.category_id}`, {
+                                        method: 'PATCH',
+                                        headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
+                                        body: JSON.stringify({ question: trimmed })
+                                    });
+                                    const data = await res.json().catch(() => ({ detail: 'Failed' }));
+                                    if (!res.ok) { alert(data.detail || 'Failed'); return; }
+                                    document.getElementById('category-question').textContent = `Results of: ${data.question}`;
+                                };
+                            }
+                        }
+                    }
+                } catch (e) { /* ignore */ }
             } catch (e) { console.error('failed to fetch category question', e); }
             // Ensure session uses this category
             try {
@@ -210,27 +210,37 @@
         };
     }
 
-     async function loadLeaderboard(categoryName) {
-         // attach screenshot handler once
-         const dlBtn = document.getElementById('download-leaderboard');
-         if (dlBtn && !dlBtn._bound) {
-             dlBtn._bound = true;
-             dlBtn.addEventListener('click', async () => {
-                 try {
-                     // Use CSS media emulation by cloning node to ensure full height
-                     const target = document.querySelector('.container');
-                     if (!target) return;
-                     const blob = await captureElementAsPng(target);
-                     const a = document.createElement('a');
-                     const cat = (document.getElementById('cat-name-display')?.textContent || 'leaderboard').trim().replace(/\s+/g,'_');
-                     a.download = `${cat}_leaderboard.png`;
-                     a.href = URL.createObjectURL(blob);
-                     document.body.appendChild(a);
-                     a.click();
-                     setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 0);
-                 } catch (e) { console.error('screenshot failed', e); }
-             });
-         }
+    async function loadLeaderboard(categoryName) {
+        // attach screenshot handler once
+        const dlBtn = document.getElementById('download-leaderboard');
+        if (dlBtn && !dlBtn._bound) {
+            dlBtn._bound = true;
+            dlBtn.addEventListener('click', async () => {
+                try {
+                    const target = document.querySelector('.container');
+                    if (!target || typeof html2canvas === 'undefined') return;
+                    // Ensure all imgs use CORS-friendly mode
+                    target.querySelectorAll('img').forEach(img => { try { img.crossOrigin = 'anonymous'; } catch(_){} });
+                    const canvas = await html2canvas(target, {
+                        useCORS: true,
+                        allowTaint: true,
+                        logging: false,
+                        backgroundColor: getComputedStyle(document.body).backgroundColor || '#ffffff',
+                        windowWidth: document.documentElement.scrollWidth,
+                        windowHeight: document.documentElement.scrollHeight,
+                        scale: Math.min(2, window.devicePixelRatio || 1)
+                    });
+                    const dataUrl = canvas.toDataURL('image/png');
+                    const a = document.createElement('a');
+                    const cat = (document.getElementById('cat-name-display')?.textContent || 'leaderboard').trim().replace(/\s+/g, '_');
+                    a.download = `${cat}_leaderboard.png`;
+                    a.href = dataUrl;
+                    document.body.appendChild(a);
+                    a.click();
+                    a.remove();
+                } catch (e) { console.error('screenshot failed', e); }
+            });
+        }
 
         try {
             let url = '/api/photos/leaderboard';
@@ -246,27 +256,27 @@
         }
     }
 
-     async function renderLeaderboard(entries) {
-         // update title to include votes and question
-         try {
-             const questionEl = document.getElementById('category-question');
-             const name = "{{ category_name or '' }}";
-             let question = (questionEl?.textContent || 'Results').replace(/^Results of:\s*/, '').trim();
-             let votesStr = '';
-             if (name) {
-                 const detailsList = await (await fetch('/api/categories/details?t=' + Date.now())).json();
-                 const det = detailsList.find(x => x.name === name);
-                 if (det) {
-                     const count = det.total_votes || 0;
-                     votesStr = `${count} votes`;
-                     if (question) {
-                         questionEl.textContent = `Results of: ${count} votes on ${question}`;
-                     } else if (det.question) {
-                         questionEl.textContent = `Results of: ${count} votes on ${det.question}`;
-                     }
-                 }
-             }
-         } catch (_) {}
+    async function renderLeaderboard(entries) {
+        // update title to include votes and question
+        try {
+            const questionEl = document.getElementById('category-question');
+            const name = "{{ category_name or '' }}";
+            let question = (questionEl?.textContent || 'Results').replace(/^Results of:\s*/, '').trim();
+            let votesStr = '';
+            if (name) {
+                const detailsList = await (await fetch('/api/categories/details?t=' + Date.now())).json();
+                const det = detailsList.find(x => x.name === name);
+                if (det) {
+                    const count = det.total_votes || 0;
+                    votesStr = `${count} votes`;
+                    if (question) {
+                        questionEl.textContent = `Results of: ${count} votes on ${question}`;
+                    } else if (det.question) {
+                        questionEl.textContent = `Results of: ${count} votes on ${det.question}`;
+                    }
+                }
+            }
+        } catch (_) { }
 
         const grid = document.getElementById('leaderboard-grid');
         grid.innerHTML = '';
@@ -342,31 +352,6 @@
             grid.appendChild(div);
         });
     }
-     // helper to capture element as PNG using built-in canvas drawImage on SVG foreignObject
-     async function captureElementAsPng(el) {
-         const rect = el.getBoundingClientRect();
-         const width = Math.ceil(rect.width);
-         const height = Math.ceil(el.scrollHeight || rect.height);
-         const svg = new Blob([
-             `<?xml version="1.0" standalone="no"?>\n`+
-             `<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"${width}\" height=\"${height}\">`+
-             `<foreignObject width=\"100%\" height=\"100%\">`+
-             new XMLSerializer().serializeToString(el.cloneNode(true))+
-             `</foreignObject></svg>`
-         ], { type: 'image/svg+xml;charset=utf-8' });
-         const url = URL.createObjectURL(svg);
-         const img = new Image();
-         img.crossOrigin = 'anonymous';
-         await new Promise((res, rej) => { img.onload = res; img.onerror = rej; img.src = url; });
-         const canvas = document.createElement('canvas');
-         canvas.width = width; canvas.height = height;
-         const ctx = canvas.getContext('2d');
-         ctx.fillStyle = getComputedStyle(document.body).backgroundColor || '#fff';
-         ctx.fillRect(0,0,width,height);
-         ctx.drawImage(img, 0, 0);
-         URL.revokeObjectURL(url);
-         const blob = await new Promise(r => canvas.toBlob(r, 'image/png', 1));
-         return blob;
-     }
- </script>
- {% endblock %}
+
+</script>
+{% endblock %}
