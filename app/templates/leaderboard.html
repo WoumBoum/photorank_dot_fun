@@ -217,18 +217,23 @@
             dlBtn._bound = true;
             dlBtn.addEventListener('click', async () => {
                 try {
-                    const target = document.querySelector('.container');
+                    const target = document.body; // include top logo and everything
                     if (!target || typeof html2canvas === 'undefined') return;
-                    // Ensure all imgs use CORS-friendly mode
-                    target.querySelectorAll('img').forEach(img => { try { img.crossOrigin = 'anonymous'; } catch(_){} });
+                    // Ensure all imgs use CORS-friendly mode (logo + grid images)
+                    document.querySelectorAll('img').forEach(img => { try { img.crossOrigin = 'anonymous'; } catch(_){} });
+                    const doc = document.documentElement;
+                    const fullW = Math.max(doc.scrollWidth, doc.clientWidth);
+                    const fullH = Math.max(doc.scrollHeight, doc.clientHeight);
                     const canvas = await html2canvas(target, {
                         useCORS: true,
                         allowTaint: true,
                         logging: false,
                         backgroundColor: getComputedStyle(document.body).backgroundColor || '#ffffff',
-                        windowWidth: document.documentElement.scrollWidth,
-                        windowHeight: document.documentElement.scrollHeight,
-                        scale: Math.min(2, window.devicePixelRatio || 1)
+                        width: fullW,
+                        height: fullH,
+                        windowWidth: fullW,
+                        windowHeight: fullH,
+                        scale: window.devicePixelRatio || 2
                     });
                     const dataUrl = canvas.toDataURL('image/png');
                     const a = document.createElement('a');
