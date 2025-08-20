@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" {% if request and request.cookies.get('theme') in ['dark','light'] %}data-theme="{{ request.cookies.get('theme') }}"{% endif %}>
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -23,8 +23,8 @@
     <div class="top-logo">
         <a href="/" aria-label="PhotoRank Home">
             <picture id="top-logo">
-                <source srcset="{{ url_for('static', path='/top_logo_photorank_dark_mode.png') }}" media="(prefers-color-scheme: dark)">
-                <img src="{{ url_for('static', path='/top_logo_photorank_light_mode.png') }}" alt="PhotoRank" />
+                <source id="logo-dark-src" srcset="{{ url_for('static', path='/top_logo_photorank_dark_mode.png') }}" media="(prefers-color-scheme: dark)">
+                <img id="logo-img" src="{{ url_for('static', path='/top_logo_photorank_light_mode.png') }}" alt="PhotoRank" />
             </picture>
         </a>
     </div>

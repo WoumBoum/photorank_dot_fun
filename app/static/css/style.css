@@ -69,9 +69,13 @@ header {
     height: auto;
     display: inline-block;
 }
-.top-logo picture {
-    display: inline-block;
-}
+
+/* Ensure picture behaves inline and CSS override works */
+.top-logo picture { display: inline-block; }
+
+/* When app forces dark via data-theme, prefer dark asset regardless of system */
+[data-theme="dark"] #top-logo #logo-img { content: url('/static/top_logo_photorank_dark_mode.png'); }
+[data-theme="light"] #top-logo #logo-img { content: url('/static/top_logo_photorank_light_mode.png'); }
 
 
 nav {
