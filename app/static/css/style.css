@@ -369,8 +369,8 @@ nav {
     margin-bottom: 0.5rem;
 }
 
-.delete-btn {
-    margin-top: 1rem;
+/* Shared brutalist button */
+.btn {
     padding: 0.5rem 1rem;
     background: var(--button-bg);
     color: var(--button-text);
@@ -380,16 +380,19 @@ nav {
     cursor: pointer;
     transition: all 0.25s ease;
 }
-
-.delete-btn:hover {
+.btn:hover {
     background: var(--button-hover-bg);
     color: var(--button-hover-text);
 }
-
-.delete-btn:disabled {
+.btn:disabled {
     background: var(--border-color);
     color: var(--secondary-text);
     cursor: not-allowed;
+}
+
+/* Delete button keeps same look, can add margins specific to cards */
+.delete-btn {
+    margin-top: 1rem;
 }
 
 /* Dark Mode Toggle */
