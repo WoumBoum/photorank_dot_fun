@@ -221,16 +221,22 @@
                     if (!target || typeof domtoimage === 'undefined') return;
                     // Ensure all imgs use CORS-friendly mode (logo + grid images)
                     document.querySelectorAll('img').forEach(img => { try { img.crossOrigin = 'anonymous'; } catch(_){} });
-                    // Force top logo <picture> to resolve into <img> src so dom-to-image captures it
+                    // Force top logo to inline data URL to avoid CORS/picture quirks
                     try {
                         const logoImg = document.getElementById('logo-img');
                         if (logoImg) {
                             const theme = document.documentElement.getAttribute('data-theme') || (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
                             const dark = theme === 'dark';
-                            // Use the static paths that are same-origin
-                            logoImg.crossOrigin = 'anonymous';
-                            logoImg.src = dark ? '/static/top_logo_photorank_dark_mode.png' : '/static/top_logo_photorank_light_mode.png';
-                            if (logoImg.decode) { try { await logoImg.decode(); } catch(_){} }
+                            const logoPath = dark ? '/static/top_logo_photorank_dark_mode.png' : '/static/top_logo_photorank_light_mode.png';
+                            const resp = await fetch(logoPath, { cache: 'no-store', credentials: 'omit' });
+                            if (resp.ok) {
+                                const blob = await resp.blob();
+                                const dataUrl = await new Promise((resolve) => { const fr = new FileReader(); fr.onload = () => resolve(fr.result); fr.readAsDataURL(blob); });
+                                logoImg.removeAttribute('srcset');
+                                logoImg.crossOrigin = 'anonymous';
+                                logoImg.src = dataUrl;
+                                if (logoImg.decode) { try { await logoImg.decode(); } catch(_){} }
+                            }
                         }
                     } catch(_) {}
                     const bg = getComputedStyle(document.body).backgroundColor || '#ffffff';
