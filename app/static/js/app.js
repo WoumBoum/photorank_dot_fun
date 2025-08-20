@@ -170,12 +170,17 @@ class PhotoRankApp {
             });
         }
 
-        // Delete button delegation for stats page
+        // Delete button delegation scoped strictly to stats page (photo delete)
         document.addEventListener('click', (e) => {
-            if (e.target.classList.contains('delete-btn')) {
+            const pathNow = window.location.pathname || '';
+            const onStats = pathNow === '/stats';
+            if (!onStats) return; // avoid intercepting delete buttons on other pages (e.g., categories, leaderboard)
+            const target = e.target;
+            if (target && target.classList && target.classList.contains('delete-btn') && target.dataset && target.dataset.photoId) {
                 e.preventDefault();
-                const photoId = e.target.dataset.photoId;
-                this.deletePhoto(photoId, e.target);
+                e.stopPropagation();
+                const photoId = target.dataset.photoId;
+                this.deletePhoto(photoId, target);
             }
         });
     }

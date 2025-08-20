@@ -391,9 +391,21 @@ nav {
 }
 
 /* Delete button keeps same look, can add margins specific to cards */
-.delete-btn {
-    margin-top: 1rem;
+.delete-btn { margin-top: 1rem; }
+
+/* Category delete button (owner/mod only) shares brutalist style */
+.category-delete-btn {
+    padding: 0.5rem 1rem;
+    background: var(--button-bg);
+    color: var(--button-text);
+    border: 1px solid var(--text-color);
+    font-family: 'Courier New', monospace;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: all 0.25s ease;
 }
+.category-delete-btn:hover { background: var(--button-hover-bg); color: var(--button-hover-text); }
+.category-delete-btn:disabled { background: var(--border-color); color: var(--secondary-text); cursor: not-allowed; }
 
 /* Dark Mode Toggle */
 .theme-toggle {

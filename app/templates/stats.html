@@ -58,7 +58,7 @@
             container.innerHTML = mine.map(c=>`<div style="display:flex;align-items:center;gap:8px;margin:6px 0;">
                 <a href="/${encodeURIComponent(c.name)}/leaderboard" style="flex:1 1 auto;">${c.name}</a>
                 <span style="flex:2 1 auto; color:#666; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${c.question}</span>
-                <button class="delete-btn" data-category-id="${c.id}">Delete</button>
+                <button class="category-delete-btn" data-category-id="${c.id}">Delete</button>
             </div>`).join('');
 
             // Wire deletion for category owners

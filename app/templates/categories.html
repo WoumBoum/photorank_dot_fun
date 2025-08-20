@@ -208,7 +208,7 @@ async function maybeAddDeleteButton(cell, category){
         if(isOwner || isModerator){
             const btn = document.createElement('button');
             btn.textContent = 'Delete';
-            btn.className = 'delete-btn';
+            btn.className = 'category-delete-btn';
             btn.onclick = async () => {
                 if(!confirm(`Delete category "${category.name}"? This will remove all its photos and votes.`)) return;
                 try{
