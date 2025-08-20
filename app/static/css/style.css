@@ -69,6 +69,9 @@ header {
     height: auto;
     display: inline-block;
 }
+.top-logo picture {
+    display: inline-block;
+}
 
 
 nav {
