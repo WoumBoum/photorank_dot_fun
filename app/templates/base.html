@@ -22,7 +22,7 @@
 <body>
     <div class="top-logo">
         <a href="/" aria-label="PhotoRank Home">
-            <img src="{{ url_for('static', path='/top_logo_photorank.png') }}" alt="PhotoRank" />
+            <img id="top-logo-img" src="{{ url_for('static', path='/top_logo_photorank_light_mode.png') }}" data-light="{{ url_for('static', path='/top_logo_photorank_light_mode.png') }}" data-dark="{{ url_for('static', path='/top_logo_photorank_dark_mode.png') }}" alt="PhotoRank" />
         </a>
     </div>
     <main>

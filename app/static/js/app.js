@@ -12,6 +12,7 @@ class PhotoRankApp {
         this.setupEventListeners();
         this.loadInitialData();
         this.handleAuthRedirect();
+        this.initTopLogoTheme();
     }
 
     handleAuthRedirect() {
@@ -116,6 +117,9 @@ class PhotoRankApp {
     }
 
     setupEventListeners() {
+        // Theme change observer for logo switching
+        const observer = new MutationObserver(() => this.updateTopLogoForTheme());
+        observer.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
         // Keyboard voting (left/right arrows)
         document.addEventListener('keydown', (e) => {
             // Ignore when typing in inputs/textareas or if no pair loaded
@@ -459,6 +463,29 @@ class PhotoRankApp {
                     grid.innerHTML = '<p>Error loading stats. Please try refreshing the page.</p>';
                 }
             }
+        }
+    }
+
+    initTopLogoTheme() {
+        // Set initial logo based on current theme
+        this.updateTopLogoForTheme();
+        // Also respond to system preference changes if user hasn't set theme
+        try {
+            const media = window.matchMedia('(prefers-color-scheme: dark)');
+            if (media && typeof media.addEventListener === 'function') {
+                media.addEventListener('change', () => this.updateTopLogoForTheme());
+            }
+        } catch (_) {}
+    }
+
+    updateTopLogoForTheme() {
+        const img = document.getElementById('top-logo-img');
+        if (!img) return;
+        const theme = document.documentElement.getAttribute('data-theme') || 'light';
+        const isDark = theme === 'dark';
+        const newSrc = isDark ? img.getAttribute('data-dark') : img.getAttribute('data-light');
+        if (newSrc && img.src !== newSrc) {
+            img.src = newSrc;
         }
     }
 
