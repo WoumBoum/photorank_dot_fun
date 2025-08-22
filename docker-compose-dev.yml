@@ -19,24 +19,19 @@ services:
             - "${API_PORT:-9001}:9000"
         volumes:
             - ./:/usr/src/app
+        working_dir: /usr/src/app
         env_file:
             - ./.env
         environment:
-            - DATABASE_HOSTNAME=db
-            - DATABASE_PORT=5432
-            - DATABASE_PASSWORD=pepito1234
-            - DATABASE_NAME=fastapi
-            - DATABASE_USERNAME=postgres
+            - DATABASE_URL=postgresql://postgres.bkzdzurviotvcplqabzj:2XugguC-Q#Z2Uvy@aws-0-eu-west-3.pooler.supabase.com:6543/postgres
         command: |
             sh -c "
                 echo 'Waiting for database...' &&
                 while ! pg_isready -h db -p 5432 -U postgres; do sleep 2; done &&
-                echo 'Database ready, running migrations...' &&
-                alembic upgrade elo_ranking_system &&
-                alembic upgrade add_categories &&
-                python -c 'import sys; sys.path.append(\"/usr/src/app\"); from app.database import SessionLocal; from app.models import Category; db = SessionLocal(); categories = [{\"name\": \"paintings\", \"description\": \"Paintings and artwork\"}, {\"name\": \"historical-photos\", \"description\": \"Historical photographs\"}, {\"name\": \"memes\", \"description\": \"Internet memes and humorous content\"}, {\"name\": \"anything\", \"description\": \"Anything else\"}]; [db.add(Category(**cat)) for cat in categories if not db.query(Category).filter(Category.name == cat[\"name\"]).first()]; db.commit(); db.close(); print(\"Categories initialized\")' &&
+                echo 'Database ready, skipping migrations (already applied)...' &&
+                python -c 'import sys; sys.path.append(\"/usr/src/app\"); from app.database import SessionLocal; from app.models import Category; db = SessionLocal(); categories = [{\"name\": \"paintings\", \"description\": \"Paintings and artwork\", \"question\": \"What is the best paintings?\", \"owner_id\": None, \"boosted_votes\": 0}, {\"name\": \"historical-photos\", \"description\": \"Historical photographs\", \"question\": \"What is the best historical-photos?\", \"owner_id\": None, \"boosted_votes\": 0}, {\"name\": \"memes\", \"description\": \"Internet memes and humorous content\", \"question\": \"What is the best memes?\", \"owner_id\": None, \"boosted_votes\": 0}, {\"name\": \"anything\", \"description\": \"Anything else\", \"question\": \"What is the best anything?\", \"owner_id\": None, \"boosted_votes\": 0}]; [db.add(Category(**cat)) for cat in categories if not db.query(Category).filter(Category.name == cat[\"name\"]).first()]; db.commit(); db.close(); print(\"Categories initialized\")' &&
                 python import_r2_photos.py &&
-                uvicorn app.main:app --host 0.0.0.0 --port 9000 --reload
+                uvicorn app.main:app --host 0.0.0.0 --port 9000 --reload --app-dir /usr/src/app
             "
 
 volumes:

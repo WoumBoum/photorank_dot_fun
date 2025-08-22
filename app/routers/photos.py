@@ -581,7 +581,7 @@ async def delete_photo(
 
 
 
-@router.delete("/categories/{category_id}/photos/{photo_id}")
+@router.delete("/category/{category_id}/photos/{photo_id}")
 async def delete_photo_as_category_owner(
     category_id: int,
     photo_id: int,

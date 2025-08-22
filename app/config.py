@@ -5,6 +5,7 @@ class Settings(BaseSettings):
     # Comma-separated list of user IDs to treat as alts
     alt_user_ids = __import__("os").getenv("ALT_USER_IDS", "")
     # Database (provide test-friendly defaults; override in real env)
+    database_url = __import__("os").getenv("DATABASE_URL")
     database_name = "test_db"
     database_hostname = "localhost"
     database_port = "5432"

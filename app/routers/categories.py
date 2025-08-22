@@ -12,6 +12,10 @@ from .photos import s3_client, R2_BUCKET_NAME  # reuse R2 client
 
 router = APIRouter(prefix="/categories", tags=['Categories'])
 
+print("=== CATEGORIES ROUTER LOADED ===")
+with open("/tmp/debug.log", "a") as f:
+    f.write("=== CATEGORIES ROUTER LOADED ===\n")
+
 # Helper to check site moderator via env (same as delete_category)
 import os
 
@@ -21,39 +25,14 @@ def is_site_moderator(user):
     return bool(mod_provider and mod_provider_id and user.provider == mod_provider and str(user.provider_id) == str(mod_provider_id))
 
 
-@router.get("/", response_model=List[CategoryOut])
-def get_categories(db: Session = Depends(get_db)):
-    """Get all available categories"""
-    categories = db.query(Category).all()
-    return categories
-
-
-@router.post("/create", status_code=status.HTTP_201_CREATED)
-def create_category(payload, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
-    """Create a new category (auth required). Names: [A-Za-z0-9_-], 2-40 chars, unique."""
-    name = payload.name.strip()
-    # Case-insensitive uniqueness check
-    existing = db.query(Category).filter(func.lower(Category.name) == func.lower(name)).first()
-    if existing:
-        raise HTTPException(status_code=400, detail="Category name already exists")
-    category = Category(name=name, question=payload.question.strip(), owner_id=current_user.id)
-    db.add(category)
-    try:
-        db.commit()
-    except Exception:
-        db.rollback()
-        # Fallback if race condition hits UNIQUE
-        raise HTTPException(status_code=400, detail="Category name already exists")
-    db.refresh(category)
-    return {"id": category.id, "name": category.name}
-
-
+# Specific routes must come before generic routes with path parameters
 @router.get("/test")
 def test_categories():
     """Simple test endpoint that returns hardcoded data"""
     print("=== TEST ENDPOINT CALLED ===")
     print("This endpoint should work without database dependency")
-    return [
+    print("Returning test data...")
+    return {"message": "Test endpoint working!", "data": [
         {
             "id": 1,
             "name": "Test Category",
@@ -65,7 +44,7 @@ def test_categories():
             "current_leader_elo": None,
             "current_leader_owner": None
         }
-    ]
+    ]}
 
 @router.get("/details")
 def get_categories_with_details(db: Session = Depends(get_db)):
@@ -125,22 +104,51 @@ def get_categories_with_details(db: Session = Depends(get_db)):
         raise
 
 
+@router.get("/", response_model=List[CategoryOut])
+def get_categories(db: Session = Depends(get_db)):
+    """Get all available categories"""
+    categories = db.query(Category).all()
+    return categories
+
+
+@router.post("/create", status_code=status.HTTP_201_CREATED)
+def create_category(payload, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    """Create a new category (auth required). Names: [A-Za-z0-9_-], 2-40 chars, unique."""
+    name = payload.name.strip()
+    # Case-insensitive uniqueness check
+    existing = db.query(Category).filter(func.lower(Category.name) == func.lower(name)).first()
+    if existing:
+        raise HTTPException(status_code=400, detail="Category name already exists")
+    category = Category(name=name, question=payload.question.strip(), owner_id=current_user.id)
+    db.add(category)
+    try:
+        db.commit()
+    except Exception:
+        db.rollback()
+        # Fallback if race condition hits UNIQUE
+        raise HTTPException(status_code=400, detail="Category name already exists")
+    db.refresh(category)
+    return {"id": category.id, "name": category.name}
+
+
+
+# Generic routes with path parameters must come after specific routes
 @router.post("/{category_id}/select")
 def select_category(category_id, request, db):
     """Select a category and store it in session"""
     category = db.query(Category).filter(Category.id == category_id).first()
     if not category:
         raise HTTPException(status_code=404, detail="Category not found")
-    
+
     # Store selected category in session
     request.session["selected_category_id"] = category_id
     request.session["selected_category_name"] = category.name
-    
+
     return {"message": "Category '{}' selected".format(category.name), "category_id": category_id}
 
 
 @router.get("/{category_id}", response_model=CategoryOut)
-def get_category(category_id, db):
+def get_category(category_id: int, db: Session = Depends(get_db)):
     """Get a specific category by ID"""
     category = db.query(Category).filter(Category.id == category_id).first()
     if not category:

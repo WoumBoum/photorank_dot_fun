@@ -1,3 +1,6 @@
+import sys
+print("=== MAIN.PY STARTING ===", file=sys.stderr)
+
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi import FastAPI, Request
@@ -8,6 +11,7 @@ from .config import description, title
 from .routers import auth, photos, votes, websocket, users, categories, analytics
 from .utils import get_category_context
 
+print("=== CREATING FASTAPI APP ===", file=sys.stderr)
 app = FastAPI(
     title=title,
     description=description,
@@ -16,6 +20,7 @@ app = FastAPI(
     redoc_url="/api/redoc",
     openapi_url="/api/openapi.json"
 )
+print("=== FASTAPI APP CREATED ===", file=sys.stderr)
 
 # Session middleware
 app.add_middleware(SessionMiddleware, secret_key="your-secret-key-change-in-production")
@@ -40,7 +45,15 @@ app.include_router(auth.router)
 app.include_router(photos.router, prefix="/api")
 app.include_router(votes.router, prefix="/api")
 app.include_router(users.router, prefix="/api")
-app.include_router(categories.router, prefix="/api")
+import sys
+print("=== INCLUDING CATEGORIES ROUTER ===", file=sys.stderr)
+try:
+    app.include_router(categories.router, prefix="/api")
+    print("=== CATEGORIES ROUTER INCLUDED SUCCESSFULLY ===", file=sys.stderr)
+except Exception as e:
+    print(f"=== ERROR INCLUDING CATEGORIES ROUTER: {e} ===", file=sys.stderr)
+    import traceback
+    print(traceback.format_exc(), file=sys.stderr)
 # Analytics (moderator-only)
 from .routers import analytics as analytics_router
 app.include_router(analytics_router.router)
