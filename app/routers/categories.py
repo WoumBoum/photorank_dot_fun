@@ -53,6 +53,8 @@ def get_categories_with_details(db):
 
     print("=== CATEGORIES DETAILS DEBUG ===")
     print("Request received for /api/categories/details")
+    import sys
+    sys.stdout.flush()  # Force output to appear immediately
 
     try:
         # Temporarily disable response model to test if issue is with validation
