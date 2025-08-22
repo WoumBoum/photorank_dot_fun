@@ -1,5 +1,12 @@
 __pycache__
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
 venv/
+.venv/
 .env
+photorank.env
 .env.*
 !.env.example

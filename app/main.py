@@ -109,6 +109,9 @@ def categories_new_page(request: Request):
     context.update(get_category_context(request))
     return templates.TemplateResponse("category_new.html", context)
 
+
+
+
 @app.get("/auth/capture", response_class=HTMLResponse)
 def auth_capture(request: Request):
     # Minimal page: store token to localStorage, then redirect client-side

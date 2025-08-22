@@ -11,22 +11,19 @@ router = APIRouter(prefix="/users", tags=['Users'])
 
 
 @router.get("/stats", response_model=UserStats)
-def get_user_stats(
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
-):
+def get_user_stats(db, current_user):
     """Get statistics for current user's photos"""
     
-    print(f"[STATS] Getting stats for user: {current_user.username} (ID: {current_user.id})")
+    print("[STATS] Getting stats for user: {} (ID: {})".format(current_user.username, current_user.id))
     
     try:
-        # Get user's photos with ranking
-        photos = db.query(Photo).filter(
+        # Get user's photos with ranking, but only include photos with valid categories
+        photos = db.query(Photo).join(Category, Photo.category_id == Category.id).filter(
             Photo.owner_id == current_user.id
         ).order_by(Photo.elo_rating.desc()).all()
-        
-        print(f"[STATS] Found {len(photos)} photos for user {current_user.username}")
-        
+
+        print("[STATS] Found {} photos for user {}".format(len(photos), current_user.username))
+
         # Get global ranking for each photo
         ranked_photos = []
         for photo in photos:
@@ -34,13 +31,12 @@ def get_user_stats(
             rank_query = db.query(func.count(Photo.id)).filter(
                 Photo.elo_rating > photo.elo_rating
             ).scalar() + 1
-            
-            # Get category name
-            category = db.query(Category).filter(Category.id == photo.category_id).first()
-            category_name = category.name if category else "unknown"
-            
-            print(f"[STATS] Processing photo {photo.id}: {photo.filename}, rank: {rank_query}, category: {category_name}")
-            
+
+            # Get category name (should always exist due to join)
+            category_name = photo.category.name if photo.category else "unknown"
+
+            print("[STATS] Processing photo {}: {}, rank: {}, category: {}".format(photo.id, photo.filename, rank_query, category_name))
+
             ranked_photos.append(LeaderboardEntry(
                 id=photo.id,
                 filename=photo.filename,
@@ -57,8 +53,8 @@ def get_user_stats(
             Vote.user_id == current_user.id
         ).count()
         
-        print(f"[STATS] User {current_user.username} has {total_votes} total votes")
-        print(f"[STATS] Returning {len(ranked_photos)} ranked photos")
+        print("[STATS] User {} has {} total votes".format(current_user.username, total_votes))
+        print("[STATS] Returning {} ranked photos".format(len(ranked_photos)))
         
         return UserStats(
             photos=ranked_photos,
@@ -66,12 +62,12 @@ def get_user_stats(
             total_votes=total_votes
         )
     except Exception as e:
-        print(f"[STATS] ERROR: {str(e)}")
+        print("[STATS] ERROR: {}".format(str(e)))
         raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.get("/me")
-def get_current_user_info(current_user: User = Depends(get_current_user)):
+def get_current_user_info(current_user):
     """Get current user basic info"""
     # Determine moderator via env, consistent with categories endpoints
     import os
@@ -91,7 +87,7 @@ def get_current_user_info(current_user: User = Depends(get_current_user)):
 
 
 @router.patch("/me/username")
-def update_username(payload: UsernameUpdate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+def update_username(payload, db, current_user):
     """Update current user's pseudonym (username)."""
     # Reserved names
     reserved = {"admin", "administrator", "moderator", "support"}

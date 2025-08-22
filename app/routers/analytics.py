@@ -9,8 +9,9 @@ from sqlalchemy.orm import Session
 from sqlalchemy import func
 
 from ..database import get_db
-from ..models import User, Photo, Vote
+from ..models import User, Photo, Vote, Category
 from ..oauth2 import get_current_user
+from .photos import s3_client, R2_BUCKET_NAME  # reuse R2 client
 
 router = APIRouter(prefix="/analytics", tags=["Analytics"])
 
@@ -273,3 +274,103 @@ def analytics_time_series(request: Request, db: Session = Depends(get_db), _: Us
         "wau_per_day": wau_series,
         "mau_per_day": mau_series,
     }
+
+
+@router.get("/orphaned-photos")
+def get_orphaned_photos(db: Session = Depends(get_db), _: User = Depends(require_moderator)):
+    """Get list of photos with deleted categories (orphaned photos)"""
+    # Find photos where category_id doesn't exist in categories table
+    orphaned_photos = db.query(Photo).outerjoin(Category, Photo.category_id == Category.id).filter(
+        Category.id.is_(None)
+    ).all()
+
+    # Get photo details with owner information
+    result = []
+    for photo in orphaned_photos:
+        owner = db.query(User).filter(User.id == photo.owner_id).first()
+        result.append({
+            "id": photo.id,
+            "filename": photo.filename,
+            "elo_rating": photo.elo_rating,
+            "total_duels": photo.total_duels,
+            "wins": photo.wins,
+            "owner_username": owner.username if owner else "unknown",
+            "owner_id": photo.owner_id,
+            "category_id": photo.category_id,
+            "created_at": photo.created_at.isoformat() if photo.created_at else None
+        })
+
+    return {"orphaned_photos": result, "total_count": len(result)}
+
+
+@router.delete("/orphaned-photos")
+def delete_orphaned_photos(photo_ids: list[int], db: Session = Depends(get_db), _: User = Depends(require_moderator)):
+    """Bulk delete orphaned photos"""
+    if not photo_ids:
+        raise HTTPException(status_code=400, detail="No photo IDs provided")
+
+    # Verify these are actually orphaned photos
+    orphaned_photos = db.query(Photo).outerjoin(Category, Photo.category_id == Category.id).filter(
+        Category.id.is_(None) & Photo.id.in_(photo_ids)
+    ).all()
+
+    if len(orphaned_photos) != len(photo_ids):
+        raise HTTPException(status_code=400, detail="Some photos are not orphaned or don't exist")
+
+    deleted_count = 0
+    errors = []
+
+    # Delete photos from R2 storage and database
+    for photo in orphaned_photos:
+        try:
+            # Delete from R2 storage
+            s3_client.delete_object(Bucket=R2_BUCKET_NAME, Key=photo.filename)
+        except Exception as e:
+            errors.append("Warning: Could not delete {} from R2: {}".format(photo.filename, str(e)))
+
+        # Delete from database (this will also cascade delete related votes)
+        db.delete(photo)
+        deleted_count += 1
+
+    db.commit()
+
+    return {
+        "message": "Deleted {} orphaned photos".format(deleted_count),
+        "deleted_count": deleted_count,
+        "errors": errors
+    }
+
+
+@router.post("/orphaned-photos/{photo_id}/reassign")
+def reassign_orphaned_photo(photo_id: int, new_category_id: int, db: Session = Depends(get_db), _: User = Depends(require_moderator)):
+    """Reassign an orphaned photo to a new category"""
+    # Verify the photo is orphaned
+    photo = db.query(Photo).outerjoin(Category, Photo.category_id == Category.id).filter(
+        Category.id.is_(None) & Photo.id == photo_id
+    ).first()
+
+    if not photo:
+        raise HTTPException(status_code=404, detail="Orphaned photo not found")
+
+    # Verify the new category exists
+    new_category = db.query(Category).filter(Category.id == new_category_id).first()
+    if not new_category:
+        raise HTTPException(status_code=404, detail="New category not found")
+
+    # Reassign the photo
+    photo.category_id = new_category_id
+    db.commit()
+
+    return {
+        "message": "Photo reassigned to category '{}'".format(new_category.name),
+        "photo_id": photo_id,
+        "new_category_id": new_category_id,
+        "new_category_name": new_category.name
+    }
+
+
+@router.get("/categories")
+def get_categories_for_reassignment(db: Session = Depends(get_db), _: User = Depends(require_moderator)):
+    """Get all categories for photo reassignment"""
+    categories = db.query(Category).all()
+    return [{"id": cat.id, "name": cat.name, "description": cat.description} for cat in categories]

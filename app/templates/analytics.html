@@ -151,6 +151,23 @@
       <div id="chart-activity" aria-label="DAU/WAU/MAU"></div>
       <small id="activity-range" class="kpi"></small>
     </section>
+
+    <section id="orphaned-photos-section" style="display: none;">
+      <h2>Orphaned Photos Management</h2>
+      <p>Photos that belong to deleted categories</p>
+
+      <div id="orphaned-stats">
+        <strong>Total Orphaned Photos: <span id="orphaned-count">—</span></strong>
+      </div>
+
+      <div id="orphaned-actions" style="margin: 20px 0;">
+        <button id="load-orphaned-btn" class="btn" style="margin-right: 10px;">Load Orphaned Photos</button>
+        <button id="select-all-btn" class="btn" style="margin-right: 10px; display: none;">Select All</button>
+        <button id="delete-selected-btn" class="btn" style="background: #dc3545; color: white; display: none;">Delete Selected</button>
+      </div>
+
+      <div id="orphaned-photos-container"></div>
+    </section>
   </main>
   <script>
     (async function () {
@@ -294,9 +311,174 @@
         document.getElementById('activity-range').textContent = rangeText(dau || wau || mau);
       } catch (e) {
         const addAlert = (id) => { const el = document.getElementById(id); if (el) el.innerHTML = '<article role="alert">Failed to load series.</article>'; };
-        addAlert('chart-votes'); addAlert('chart-unique'); addAlert('chart-users'); addAlert('chart-activity');
-      }
-    })();
+         addAlert('chart-votes'); addAlert('chart-unique'); addAlert('chart-users'); addAlert('chart-activity');
+       }
+
+       // Orphaned Photos Management (Moderator only)
+       try {
+         // Try to load orphaned photos - if it fails (403), user is not moderator
+         const orphanedData = await fetchJSON('/analytics/orphaned-photos');
+         if (orphanedData) {
+           // Show orphaned photos section
+           document.getElementById('orphaned-photos-section').style.display = 'block';
+           document.getElementById('orphaned-count').textContent = orphanedData.total_count;
+
+           // Setup event listeners
+           document.getElementById('load-orphaned-btn').addEventListener('click', loadOrphanedPhotos);
+           document.getElementById('select-all-btn').addEventListener('click', selectAllOrphanedPhotos);
+           document.getElementById('delete-selected-btn').addEventListener('click', deleteSelectedOrphanedPhotos);
+         }
+       } catch (e) {
+         // User is not moderator, orphaned photos section remains hidden
+         console.log('Orphaned photos management not available (not moderator)');
+       }
+
+       async function loadOrphanedPhotos() {
+         try {
+           const data = await fetchJSON('/analytics/orphaned-photos');
+           const categories = await fetchJSON('/analytics/categories');
+
+           const container = document.getElementById('orphaned-photos-container');
+           if (data.orphaned_photos.length === 0) {
+             container.innerHTML = '<article role="note">No orphaned photos found!</article>';
+             return;
+           }
+
+           const html = `
+             <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px; margin-top: 20px;">
+               ${data.orphaned_photos.map(photo => `
+                 <div style="border: 1px solid #333; padding: 15px; background: #111; border-radius: 5px;">
+                   <div style="display: flex; align-items: center; margin-bottom: 10px;">
+                     <input type="checkbox" class="orphaned-checkbox" value="${photo.id}" style="margin-right: 10px;">
+                     <strong>Photo #${photo.id}</strong>
+                   </div>
+                   <img src="/api/photos/${photo.filename}" style="max-width: 100%; height: 150px; object-fit: cover; border-radius: 3px; margin-bottom: 10px;"
+                        onerror="this.src='/static/placeholder.png'">
+                   <div style="font-size: 12px; color: #ccc; margin-bottom: 10px;">
+                     <div><strong>Owner:</strong> ${photo.owner_username}</div>
+                     <div><strong>ELO:</strong> ${photo.elo_rating.toFixed(0)}</div>
+                     <div><strong>Duels:</strong> ${photo.total_duels}</div>
+                     <div><strong>Wins:</strong> ${photo.wins}</div>
+                     <div><strong>Category ID:</strong> ${photo.category_id}</div>
+                   </div>
+                   <div style="display: flex; gap: 5px; flex-wrap: wrap;">
+                     <button onclick="deleteOrphanedPhoto(${photo.id})" style="background: #dc3545; color: white; border: none; padding: 5px 10px; border-radius: 3px; cursor: pointer; font-size: 12px;">Delete</button>
+                     <select id="category-${photo.id}" style="padding: 5px; border: 1px solid #555; background: #222; color: white; border-radius: 3px; font-size: 12px;">
+                       <option value="">Reassign to...</option>
+                       ${categories.map(cat => `<option value="${cat.id}">${cat.name}</option>`).join('')}
+                     </select>
+                     <button onclick="reassignOrphanedPhoto(${photo.id})" style="background: #28a745; color: white; border: none; padding: 5px 10px; border-radius: 3px; cursor: pointer; font-size: 12px;">Reassign</button>
+                   </div>
+                 </div>
+               `).join('')}
+             </div>
+           `;
+
+           container.innerHTML = html;
+
+           // Show action buttons
+           document.getElementById('select-all-btn').style.display = 'inline-block';
+           document.getElementById('delete-selected-btn').style.display = 'inline-block';
+
+         } catch (e) {
+           container.innerHTML = '<article role="alert">Failed to load orphaned photos: ' + (e.message || e) + '</article>';
+         }
+       }
+
+       function selectAllOrphanedPhotos() {
+         const checkboxes = document.querySelectorAll('.orphaned-checkbox');
+         const allChecked = Array.from(checkboxes).every(cb => cb.checked);
+         checkboxes.forEach(cb => cb.checked = !allChecked);
+       }
+
+       async function deleteSelectedOrphanedPhotos() {
+         const selectedIds = Array.from(document.querySelectorAll('.orphaned-checkbox:checked')).map(cb => parseInt(cb.value));
+
+         if (selectedIds.length === 0) {
+           alert('Please select photos to delete');
+           return;
+         }
+
+         if (!confirm(`Are you sure you want to delete ${selectedIds.length} orphaned photos?`)) return;
+
+         try {
+           const response = await fetch('/analytics/orphaned-photos', {
+             method: 'DELETE',
+             headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+             body: JSON.stringify({ photo_ids: selectedIds })
+           });
+
+           if (!response.ok) {
+             throw new Error('Failed to delete photos');
+           }
+
+           const result = await response.json();
+           alert(result.message);
+           if (result.errors && result.errors.length > 0) {
+             alert('Warnings: ' + result.errors.join('\n'));
+           }
+
+           // Reload the photos
+           loadOrphanedPhotos();
+
+         } catch (e) {
+           alert('Error: ' + (e.message || e));
+         }
+       }
+
+       async function deleteOrphanedPhoto(photoId) {
+         if (!confirm('Are you sure you want to delete this orphaned photo?')) return;
+
+         try {
+           const response = await fetch(`/analytics/orphaned-photos?photo_ids=${photoId}`, {
+             method: 'DELETE',
+             headers: { 'Authorization': 'Bearer ' + token }
+           });
+
+           if (!response.ok) {
+             throw new Error('Failed to delete photo');
+           }
+
+           const result = await response.json();
+           alert(result.message);
+
+           // Reload the photos
+           loadOrphanedPhotos();
+
+         } catch (e) {
+           alert('Error: ' + (e.message || e));
+         }
+       }
+
+       async function reassignOrphanedPhoto(photoId) {
+         const categoryId = document.getElementById(`category-${photoId}`).value;
+         if (!categoryId) {
+           alert('Please select a category');
+           return;
+         }
+
+         try {
+           const response = await fetch(`/analytics/orphaned-photos/${photoId}/reassign`, {
+             method: 'POST',
+             headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+             body: JSON.stringify({ new_category_id: parseInt(categoryId) })
+           });
+
+           if (!response.ok) {
+             throw new Error('Failed to reassign photo');
+           }
+
+           const result = await response.json();
+           alert(result.message);
+
+           // Reload the photos
+           loadOrphanedPhotos();
+
+         } catch (e) {
+           alert('Error: ' + (e.message || e));
+         }
+       }
+     })();
   </script>
 </body>
 

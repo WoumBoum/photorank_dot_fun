@@ -14,21 +14,21 @@ router = APIRouter(prefix="/categories", tags=['Categories'])
 # Helper to check site moderator via env (same as delete_category)
 import os
 
-def is_site_moderator(user: User) -> bool:
+def is_site_moderator(user):
     mod_provider = os.getenv("MODERATOR_PROVIDER")
     mod_provider_id = os.getenv("MODERATOR_PROVIDER_ID")
     return bool(mod_provider and mod_provider_id and user.provider == mod_provider and str(user.provider_id) == str(mod_provider_id))
 
 
 @router.get("/", response_model=List[CategoryOut])
-def get_categories(db: Session = Depends(get_db)):
+def get_categories(db):
     """Get all available categories"""
     categories = db.query(Category).all()
     return categories
 
 
 @router.post("/create", status_code=status.HTTP_201_CREATED)
-def create_category(payload: CategoryCreate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+def create_category(payload, db, current_user):
     """Create a new category (auth required). Names: [A-Za-z0-9_-], 2-40 chars, unique."""
     name = payload.name.strip()
     # Case-insensitive uniqueness check
@@ -48,7 +48,7 @@ def create_category(payload: CategoryCreate, db: Session = Depends(get_db), curr
 
 
 @router.get("/details", response_model=List[CategoryDetail])
-def get_categories_with_details(db: Session = Depends(get_db)):
+def get_categories_with_details(db):
     """Get all categories with aggregated data including votes and current leader"""
     
     # Subquery to get vote counts per category (divide by 2 to fix double counting)
@@ -92,7 +92,7 @@ def get_categories_with_details(db: Session = Depends(get_db)):
 
 
 @router.post("/{category_id}/select")
-def select_category(category_id: int, request: Request, db: Session = Depends(get_db)):
+def select_category(category_id, request, db):
     """Select a category and store it in session"""
     category = db.query(Category).filter(Category.id == category_id).first()
     if not category:
@@ -102,11 +102,11 @@ def select_category(category_id: int, request: Request, db: Session = Depends(ge
     request.session["selected_category_id"] = category_id
     request.session["selected_category_name"] = category.name
     
-    return {"message": f"Category '{category.name}' selected", "category_id": category_id}
+    return {"message": "Category '{}' selected".format(category.name), "category_id": category_id}
 
 
 @router.get("/{category_id}", response_model=CategoryOut)
-def get_category(category_id: int, db: Session = Depends(get_db)):
+def get_category(category_id, db):
     """Get a specific category by ID"""
     category = db.query(Category).filter(Category.id == category_id).first()
     if not category:
@@ -115,18 +115,18 @@ def get_category(category_id: int, db: Session = Depends(get_db)):
 
 
 @router.post("/select-by-name/{category_name}", status_code=status.HTTP_200_OK)
-def select_category_by_name(category_name: str, request: Request, db: Session = Depends(get_db)):
+def select_category_by_name(category_name, request, db):
     """Select a category by its name (case-insensitive) and store it in session"""
     category = db.query(Category).filter(func.lower(Category.name) == func.lower(category_name)).first()
     if not category:
         raise HTTPException(status_code=404, detail="Category not found")
     request.session["selected_category_id"] = category.id
     request.session["selected_category_name"] = category.name
-    return {"message": f"Category '{category.name}' selected", "category_id": category.id}
+    return {"message": "Category '{}' selected".format(category.name), "category_id": category.id}
 
 
 @router.post("/{category_id}/boost-votes")
-def boost_votes(category_id: int, amount: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+def boost_votes(category_id, amount, db, current_user):
     """Increase boosted_votes for a category. Allowed ONLY to site moderator."""
     category = db.query(Category).filter(Category.id == category_id).first()
     if not category:
@@ -142,7 +142,7 @@ def boost_votes(category_id: int, amount: int, db: Session = Depends(get_db), cu
     return {"message": "Boost applied", "boosted_votes": category.boosted_votes, "category_id": category.id}
 
 @router.patch("/{category_id}")
-def update_category(category_id: int, payload: CategoryUpdate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+def update_category(category_id, payload, db, current_user):
     """Update category name/question/description. Only site moderator allowed."""
     category = db.query(Category).filter(Category.id == category_id).first()
     if not category:
@@ -172,7 +172,7 @@ def update_category(category_id: int, payload: CategoryUpdate, db: Session = Dep
 
 
 @router.delete("/{category_id}")
-def delete_category(category_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+def delete_category(category_id, db, current_user):
     """Delete a category.
     Allowed if requester is the category owner OR a site moderator identified by stable OAuth identity.
     """
@@ -198,10 +198,17 @@ def delete_category(category_id: int, db: Session = Depends(get_db), current_use
         try:
             s3_client.delete_object(Bucket=R2_BUCKET_NAME, Key=p.filename)
         except Exception as e:
-            print(f"Warning: Could not delete file from R2: {e}")
+            print("Warning: Could not delete file from R2: {}".format(e))
 
-    # Deleting category will cascade delete photos and votes (ondelete=CASCADE for photos; votes cascade by FK)
+    # Explicitly delete photos first to ensure they're removed before category deletion
+    for photo in photos:
+        db.delete(photo)
+
+    # Deleting category will cascade delete any remaining photos and votes (ondelete=CASCADE for photos; votes cascade by FK)
     db.delete(category)
     db.commit()
 
     return {"message": "Category deleted"}
+
+
+

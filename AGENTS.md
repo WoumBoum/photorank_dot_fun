@@ -208,6 +208,18 @@ alembic revision --autogenerate -m "description"
 alembic upgrade head
 ```
 
+### **Orphaned Photos Management**
+When categories are deleted, photos that belonged to those categories can become "orphaned" (still in database but referencing deleted categories). This causes 404 errors in user stats pages.
+
+**Admin Interface**: Available at `/analytics/` for moderators
+- View all orphaned photos with thumbnails
+- Bulk delete or reassign orphaned photos
+- Individual photo management options
+
+**Prevention**: The `fix_photos_category_fk_cascade` migration adds CASCADE deletion to prevent future orphaned photos.
+
+**Manual Cleanup**: If orphaned photos exist, use the admin interface to clean them up.
+
 ### Production DB note: boosted_votes
 The `boosted_votes` column on `categories` was created manually on Supabase and then stamped in Alembic to keep history aligned.
 
