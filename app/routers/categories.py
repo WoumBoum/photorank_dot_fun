@@ -47,6 +47,23 @@ def create_category(payload, db, current_user):
     return {"id": category.id, "name": category.name}
 
 
+@router.get("/test")
+def test_categories():
+    """Simple test endpoint that returns hardcoded data"""
+    return [
+        {
+            "id": 1,
+            "name": "Test Category",
+            "description": "This is a test category",
+            "created_at": "2024-01-01T00:00:00",
+            "total_votes": 0,
+            "owner_id": None,
+            "current_leader_filename": None,
+            "current_leader_elo": None,
+            "current_leader_owner": None
+        }
+    ]
+
 @router.get("/details")
 def get_categories_with_details(db):
     """Get all categories with aggregated data including votes and current leader"""
