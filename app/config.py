@@ -1,4 +1,4 @@
-from pydantic import BaseSettings
+from pydantic_settings import BaseSettings
 
 
 class Settings(BaseSettings):
@@ -28,6 +28,24 @@ class Settings(BaseSettings):
 
     # Frontend base URL used for CORS/redirects
     frontend_url: str = __import__("os").getenv("FRONTEND_URL", "http://localhost:9001")
+
+    # Database URL
+    database_url: str = __import__("os").getenv("DATABASE_URL", "")
+
+    # R2/Cloudflare Storage
+    r2_access_key_id: str = __import__("os").getenv("R2_ACCESS_KEY_ID", "")
+    r2_secret_access_key: str = __import__("os").getenv("R2_SECRET_ACCESS_KEY", "")
+    r2_endpoint_url: str = __import__("os").getenv("R2_ENDPOINT_URL", "")
+    r2_public_url: str = __import__("os").getenv("R2_PUBLIC_URL", "")
+    r2_bucket_name: str = __import__("os").getenv("R2_BUCKET_NAME", "")
+
+    # Cloudflare Turnstile
+    cf_turnstile_site_key: str = __import__("os").getenv("CF_TURNSTILE_SITE_KEY", "")
+    cf_turnstile_secret_key: str = __import__("os").getenv("CF_TURNSTILE_SECRET_KEY", "")
+
+    # Moderator settings
+    moderator_provider: str = __import__("os").getenv("MODERATOR_PROVIDER", "")
+    moderator_provider_id: str = __import__("os").getenv("MODERATOR_PROVIDER_ID", "")
 
     class Config:
         env_file = ".env"

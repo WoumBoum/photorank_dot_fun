@@ -12,7 +12,7 @@ from botocore.client import Config
 from dotenv import load_dotenv
 import csv
 import io
-import requests
+import httpx
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Query
 
@@ -706,17 +706,18 @@ async def upload_photos_admin_batch(
         for photo_data in photos_to_create:
             # Download image from URL
             try:
-                response = requests.get(photo_data['image_url'], timeout=30)
-                response.raise_for_status()
-                image_content = response.content
-                content_type = response.headers.get('content-type', 'image/jpeg')
+                async with httpx.AsyncClient(timeout=30.0) as client:
+                    response = await client.get(photo_data['image_url'])
+                    response.raise_for_status()
+                    image_content = response.content
+                    content_type = response.headers.get('content-type', 'image/jpeg')
 
                 if not content_type.startswith('image/'):
                     raise HTTPException(
                         status_code=400,
                         detail=f"URL {photo_data['image_url']} does not point to an image"
                     )
-            except requests.RequestException as e:
+            except httpx.RequestError as e:
                 raise HTTPException(
                     status_code=400,
                     detail=f"Failed to download image from {photo_data['image_url']}: {str(e)}"

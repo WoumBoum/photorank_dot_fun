@@ -27,12 +27,12 @@ class CategoryBase(BaseModel):
 
 
 class CategoryCreate(BaseModel):
-    name: constr(strip_whitespace=True, min_length=2, max_length=40, regex=r"^[A-Za-z0-9_-]+$")
+    name: constr(strip_whitespace=True, min_length=2, max_length=40, pattern=r"^[A-Za-z0-9_-]+$")
     question: constr(strip_whitespace=True, min_length=4, max_length=200)
 
 
 class CategoryUpdate(BaseModel):
-    name: Optional[constr(strip_whitespace=True, min_length=2, max_length=40, regex=r"^[A-Za-z0-9_-]+$")]
+    name: Optional[constr(strip_whitespace=True, min_length=2, max_length=40, pattern=r"^[A-Za-z0-9_-]+$")]
     question: Optional[constr(strip_whitespace=True, min_length=4, max_length=200)]
     description: Optional[constr(strip_whitespace=True, max_length=200)] = None
 
@@ -115,7 +115,7 @@ class LeaderboardEntry(BaseModel):
 
 
 class UsernameUpdate(BaseModel):
-    username: constr(strip_whitespace=True, min_length=3, max_length=20, regex=r"^[a-z0-9_-]+$")
+    username: constr(strip_whitespace=True, min_length=3, max_length=20, pattern=r"^[a-z0-9_-]+$")
 
 
 class UserStats(BaseModel):
