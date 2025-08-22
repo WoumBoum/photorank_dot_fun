@@ -47,23 +47,22 @@ def create_category(payload, db, current_user):
     return {"id": category.id, "name": category.name}
 
 
-@router.get("/details", response_model=List[CategoryDetail])
+@router.get("/details")
 def get_categories_with_details(db):
     """Get all categories with aggregated data including votes and current leader"""
 
-    # Simple approach: just return basic category info without complex queries
-    # This will help us isolate if the issue is with the data or the schema
+    # Temporarily disable response model to test if issue is with validation
     categories = db.query(Category).all()
 
     result = []
     for category in categories:
-        # Create a minimal response that matches the schema
+        # Create a minimal response
         category_dict = {
             "id": category.id,
             "name": category.name,
             "description": category.description,
-            "created_at": category.created_at,
-            "total_votes": category.boosted_votes or 0,  # Simple fallback
+            "created_at": category.created_at.isoformat() if category.created_at else None,
+            "total_votes": category.boosted_votes or 0,
             "owner_id": category.owner_id,
             "current_leader_filename": None,
             "current_leader_elo": None,
