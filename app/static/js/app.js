@@ -28,9 +28,7 @@ class PhotoRankApp {
         }
     }
 
-    isAuthenticated() {
-        return localStorage.getItem('token') !== null;
-    }
+
 
     async makeAuthenticatedRequest(url, options = {}) {
         const token = localStorage.getItem('token');
@@ -84,13 +82,12 @@ class PhotoRankApp {
     setupWebSocket() {
         const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
         const wsUrl = `${protocol}//${window.location.host}/ws`;
-        console.log('Connecting to WebSocket:', wsUrl);
-        
+
         try {
             this.ws = new WebSocket(wsUrl);
-            
+
             this.ws.onopen = () => {
-                console.log('WebSocket connected successfully');
+                console.log('WebSocket connected');
             };
             
             this.ws.onmessage = (event) => {
@@ -103,21 +100,16 @@ class PhotoRankApp {
             this.ws.onerror = (error) => {
                 console.error('WebSocket error:', error);
             };
-            
+
             this.ws.onclose = (event) => {
                 console.log('WebSocket closed:', event.code, event.reason);
             };
         } catch (error) {
-            console.error('Error loading stats:', error);
-            const grid = document.getElementById('stats-grid');
-            if (grid) {
-                grid.innerHTML = '<p>Error loading stats. Please try refreshing the page.</p>';
-            }
+            console.error('WebSocket setup error:', error);
         }
     }
 
     setupEventListeners() {
-        // Theme change observer not needed for logo anymore (handled by <picture> + prefers-color-scheme)
         // Keyboard voting (left/right arrows)
         document.addEventListener('keydown', (e) => {
             // Ignore when typing in inputs/textareas or if no pair loaded
@@ -342,7 +334,7 @@ class PhotoRankApp {
     async handleVote(event) {
         if (!this.currentPair) return;
         
-        if (!this.isAuthenticated()) {
+        if (!isAuthenticated()) {
             window.location.href = '/login';
             return;
         }
@@ -435,11 +427,30 @@ class PhotoRankApp {
     }
 
     async loadStats() {
-        if (!this.isAuthenticated()) {
-            console.log('[STATS] User not authenticated, redirecting to login');
+        if (!isAuthenticated()) {
             window.location.href = '/login';
             return;
         }
+
+        try {
+            const response = await this.makeAuthenticatedRequest('/api/users/stats');
+
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+
+            const stats = await response.json();
+            this.displayStats(stats);
+        } catch (error) {
+            if (error.message !== 'Authentication required') {
+                console.error('Error loading stats:', error);
+                const grid = document.getElementById('stats-grid');
+                if (grid) {
+                    grid.innerHTML = '<p>Error loading stats. Please try refreshing the page.</p>';
+                }
+            }
+        }
+    }
         
         console.log('[STATS] Loading stats for authenticated user');
         
@@ -469,7 +480,7 @@ class PhotoRankApp {
         }
     }
 
-    // Top logo theming handled by <picture> element with prefers-color-scheme.
+
 
     initPseudonymEditor() {
         const input = document.getElementById('pseudo-input');
@@ -515,19 +526,14 @@ class PhotoRankApp {
     displayStats(stats) {
         const grid = document.getElementById('stats-grid');
         if (!grid) return;
-        
-        console.log('[STATS] Displaying stats:', stats);
-        
+
         grid.innerHTML = '';
-        
+
         if (!stats || !stats.photos || stats.photos.length === 0) {
-            console.log('[STATS] No photos found');
             grid.innerHTML = '<p>No photos uploaded yet. <a href="/upload">Upload your first photo</a></p>';
             return;
         }
-        
-        console.log(`[STATS] Displaying ${stats.photos.length} photos`);
-        
+
         stats.photos.forEach(photo => {
             const card = document.createElement('div');
             card.className = 'stat-card';
@@ -596,7 +602,7 @@ class PhotoRankApp {
         const files = Array.from(fileList || []).filter(f => f && f.type && f.type.startsWith('image/'));
         if (files.length === 0) return;
 
-        if (!this.isAuthenticated()) {
+        if (!isAuthenticated()) {
             window.location.href = '/login';
             return;
         }
@@ -638,91 +644,7 @@ class PhotoRankApp {
     }
 }
 
-// Global debug logging function
-window.debugLog = function(message, type = 'info') {
-    const debugPanel = document.getElementById('debug-panel');
-    if (!debugPanel) {
-        console.log(`[DEBUG] ${type}: ${message}`);
-        return;
-    }
-    
-    const logEntry = document.createElement('div');
-    logEntry.className = 'debug-log';
-    logEntry.innerHTML = `[${new Date().toLocaleTimeString()}] ${type.toUpperCase()}: ${message}`;
-    
-    const logContainer = debugPanel.querySelector('.debug-content');
-    if (logContainer) {
-        logContainer.appendChild(logEntry);
-        logContainer.scrollTop = logContainer.scrollHeight;
-    }
-    
-    // Also log to console for backup
-    console.log(`[DEBUG] ${type}: ${message}`);
-};
 
-// Theme toggle functionality with debug logging
-window.initThemeToggle = function() {
-    window.debugLog('initThemeToggle() called');
-    
-    const themeToggle = document.getElementById('theme-toggle');
-    if (!themeToggle) {
-        window.debugLog('Theme toggle button not found', 'error');
-        return;
-    }
-    
-    window.debugLog('Theme toggle button found', 'success');
-
-    // Load saved theme or use system preference
-    const savedTheme = localStorage.getItem('theme');
-    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-    const currentTheme = savedTheme || (prefersDark ? 'dark' : 'light');
-    
-    window.debugLog(`System prefers dark: ${prefersDark}`);
-    window.debugLog(`Saved theme: ${savedTheme}`);
-    window.debugLog(`Current theme: ${currentTheme}`);
-    
-    document.documentElement.setAttribute('data-theme', currentTheme);
-    window.debugLog(`Set data-theme to: ${currentTheme}`);
-    
-    window.updateToggleButton(currentTheme);
-
-    themeToggle.onclick = function() {
-        window.debugLog('Theme toggle clicked');
-        
-        const currentTheme = document.documentElement.getAttribute('data-theme');
-        window.debugLog(`Current theme from data-theme: ${currentTheme}`);
-        
-        const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
-        window.debugLog(`New theme will be: ${newTheme}`);
-        
-        document.documentElement.setAttribute('data-theme', newTheme);
-        window.debugLog(`Set data-theme to: ${newTheme}`);
-        
-        localStorage.setItem('theme', newTheme);
-        window.debugLog(`Saved theme to localStorage: ${newTheme}`);
-        
-        window.updateToggleButton(newTheme);
-        window.debugLog(`Updated toggle button for: ${newTheme}`);
-    };
-    
-    window.debugLog('Theme toggle initialized successfully');
-};
-
-window.updateToggleButton = function(theme) {
-    const themeToggle = document.getElementById('theme-toggle');
-    if (!themeToggle) {
-        window.debugLog('Cannot update toggle button - not found', 'error');
-        return;
-    }
-    
-    const newText = theme === 'dark' ? '◑' : '◐';
-    const newTitle = theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode';
-    
-    themeToggle.textContent = newText;
-    themeToggle.title = newTitle;
-    
-    window.debugLog(`Updated button: text=${newText}, title=${newTitle}`);
-};
 
 // Initialize app when DOM is loaded
 document.addEventListener('DOMContentLoaded', () => {
@@ -732,5 +654,5 @@ document.addEventListener('DOMContentLoaded', () => {
             window.__photorankApp = new PhotoRankApp();
         }
     }
-    initThemeToggle();
+
 });
