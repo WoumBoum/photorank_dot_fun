@@ -4,6 +4,7 @@ from sqlalchemy import func
 from typing import List
 
 from ..database import get_db
+from fastapi import Depends
 from ..models import Category, Photo, Vote, User
 from ..schemas import CategoryOut, CategoryDetail, CategoryCreate, CategoryUpdate
 from ..oauth2 import get_current_user
