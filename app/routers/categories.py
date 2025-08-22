@@ -50,6 +50,8 @@ def create_category(payload, db, current_user):
 @router.get("/test")
 def test_categories():
     """Simple test endpoint that returns hardcoded data"""
+    print("=== TEST ENDPOINT CALLED ===")
+    print("This endpoint should work without database dependency")
     return [
         {
             "id": 1,
