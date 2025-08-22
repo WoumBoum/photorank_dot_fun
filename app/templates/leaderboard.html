@@ -224,24 +224,45 @@
                     // Force top logo to inline data URL to avoid CORS/picture quirks
                     try {
                         const logoImg = document.getElementById('logo-img');
-                        if (logoImg) {
-                            const theme = document.documentElement.getAttribute('data-theme') || (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+                        const logoPicture = document.getElementById('top-logo');
+                        if (logoImg && logoPicture) {
+                            // Determine current theme
+                            const theme = document.documentElement.getAttribute('data-theme') ||
+                                        (localStorage.getItem('theme')) ||
+                                        (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
                             const dark = theme === 'dark';
                             const logoPath = dark ? '/static/top_logo_photorank_dark_mode.png' : '/static/top_logo_photorank_light_mode.png';
+
+                            // Fetch and convert to data URL
                             const resp = await fetch(logoPath, { cache: 'no-store', credentials: 'omit' });
                             if (resp.ok) {
                                 const blob = await resp.blob();
-                                const dataUrl = await new Promise((resolve) => { const fr = new FileReader(); fr.onload = () => resolve(fr.result); fr.readAsDataURL(blob); });
-                                logoImg.removeAttribute('srcset');
-                                logoImg.loading = 'eager';
-                                logoImg.crossOrigin = 'anonymous';
-                                logoImg.src = dataUrl;
-                                if (logoImg.decode) { try { await logoImg.decode(); } catch(_){} }
+                                const dataUrl = await new Promise((resolve) => {
+                                    const fr = new FileReader();
+                                    fr.onload = () => resolve(fr.result);
+                                    fr.readAsDataURL(blob);
+                                });
+
+                                // Remove picture element complexity and replace with simple img
+                                const newImg = document.createElement('img');
+                                newImg.id = 'logo-img';
+                                newImg.src = dataUrl;
+                                newImg.alt = 'PhotoRank';
+                                newImg.style.cssText = logoImg.style.cssText;
+                                newImg.className = logoImg.className;
+
+                                // Replace the picture element with the simple img
+                                logoPicture.parentNode.replaceChild(newImg, logoPicture);
+
+                                // Ensure image is loaded
+                                if (newImg.decode) {
+                                    try { await newImg.decode(); } catch(_) {}
+                                }
                                 await new Promise(r => requestAnimationFrame(r));
-                                await new Promise(r => setTimeout(r, 0));
+                                await new Promise(r => setTimeout(r, 100)); // Extra time for rendering
                             }
                         }
-                    } catch(_) {}
+                    } catch(e) { console.error('Logo preparation failed:', e); }
                     const bg = getComputedStyle(document.body).backgroundColor || '#ffffff';
                     const dataUrl = await domtoimage.toPng(target, {
                         cacheBust: true,
