@@ -51,26 +51,56 @@ def create_category(payload, db, current_user):
 def get_categories_with_details(db):
     """Get all categories with aggregated data including votes and current leader"""
 
-    # Temporarily disable response model to test if issue is with validation
-    categories = db.query(Category).all()
+    print("=== CATEGORIES DETAILS DEBUG ===")
+    print("Request received for /api/categories/details")
 
-    result = []
-    for category in categories:
-        # Create a minimal response
-        category_dict = {
-            "id": category.id,
-            "name": category.name,
-            "description": category.description,
-            "created_at": category.created_at.isoformat() if category.created_at else None,
-            "total_votes": category.boosted_votes or 0,
-            "owner_id": category.owner_id,
-            "current_leader_filename": None,
-            "current_leader_elo": None,
-            "current_leader_owner": None
-        }
-        result.append(category_dict)
+    try:
+        # Temporarily disable response model to test if issue is with validation
+        print("Querying database for categories...")
+        categories = db.query(Category).all()
+        print(f"Found {len(categories)} categories in database")
 
-    return result
+        result = []
+        for i, category in enumerate(categories):
+            print(f"Processing category {i+1}: {category.name} (ID: {category.id})")
+
+            # Create a minimal response
+            category_dict = {
+                "id": category.id,
+                "name": category.name,
+                "description": category.description,
+                "created_at": category.created_at.isoformat() if category.created_at else None,
+                "total_votes": category.boosted_votes or 0,
+                "owner_id": category.owner_id,
+                "current_leader_filename": None,
+                "current_leader_elo": None,
+                "current_leader_owner": None
+            }
+
+            print(f"  - ID: {category_dict['id']}")
+            print(f"  - Name: {category_dict['name']}")
+            print(f"  - Description: {category_dict['description']}")
+            print(f"  - Created At: {category_dict['created_at']}")
+            print(f"  - Total Votes: {category_dict['total_votes']}")
+            print(f"  - Owner ID: {category_dict['owner_id']}")
+
+            result.append(category_dict)
+
+        print(f"Successfully created response with {len(result)} categories")
+        print("Response data:", result)
+        print("=== END CATEGORIES DETAILS DEBUG ===")
+
+        return result
+
+    except Exception as e:
+        print("=== ERROR IN CATEGORIES DETAILS ===")
+        print(f"Exception type: {type(e).__name__}")
+        print(f"Exception message: {str(e)}")
+        import traceback
+        print("Full traceback:")
+        traceback.print_exc()
+        print("=== END ERROR ===")
+        raise
 
 
 @router.post("/{category_id}/select")
