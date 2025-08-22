@@ -51,43 +51,25 @@ def create_category(payload, db, current_user):
 def get_categories_with_details(db):
     """Get all categories with aggregated data including votes and current leader"""
 
-    # Get all categories with their basic info
+    # Simple approach: just return basic category info without complex queries
+    # This will help us isolate if the issue is with the data or the schema
     categories = db.query(Category).all()
 
     result = []
     for category in categories:
-        # Get vote count for this category (only from photos that have valid categories)
-        vote_count = db.query(func.count(Vote.id)).select_from(
-            Vote.join(Photo, (Vote.winner_id == Photo.id) | (Vote.loser_id == Photo.id))
-        ).filter(Photo.category_id == category.id).scalar() or 0
-
-        # Get the current leader for this category
-        leader_query = db.query(
-            Photo.filename,
-            Photo.elo_rating,
-            User.username.label('owner_username')
-        ).join(User, Photo.owner_id == User.id
-        ).filter(Photo.category_id == category.id
-        ).order_by(Photo.elo_rating.desc()).first()
-
-        # Create a dictionary that matches the CategoryDetail schema
-        # Use the same structure but ensure proper types
+        # Create a minimal response that matches the schema
         category_dict = {
             "id": category.id,
             "name": category.name,
             "description": category.description,
             "created_at": category.created_at,
-            "total_votes": int((vote_count / 2) + (category.boosted_votes or 0)),
+            "total_votes": category.boosted_votes or 0,  # Simple fallback
             "owner_id": category.owner_id,
-            "current_leader_filename": leader_query.filename if leader_query else None,
-            "current_leader_elo": float(leader_query.elo_rating) if leader_query and leader_query.elo_rating else None,
-            "current_leader_owner": leader_query.owner_username if leader_query else None
+            "current_leader_filename": None,
+            "current_leader_elo": None,
+            "current_leader_owner": None
         }
-
         result.append(category_dict)
-
-    # Sort by total votes descending, then by name
-    result.sort(key=lambda x: (-x['total_votes'], x['name']))
 
     return result
 
