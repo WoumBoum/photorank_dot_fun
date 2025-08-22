@@ -75,8 +75,21 @@ def upload_redirect():
 
 @app.get("/{category_name}/upload", response_class=HTMLResponse)
 def upload_by_category(category_name: str, request: Request):
+    from .oauth2 import get_current_user_optional
+    from .database import get_db
+    from .routers.photos import is_admin_user
+
     context = {"request": request, "category_name": category_name}
     context.update(get_category_context(request))
+
+    # Check if user is admin
+    db = next(get_db())
+    current_user = get_current_user_optional(request=request, db=db)
+    is_admin = False
+    if current_user:
+        is_admin = is_admin_user(current_user)
+    context["is_admin"] = is_admin
+
     return templates.TemplateResponse("upload.html", context)
 
 @app.get("/stats", response_class=HTMLResponse)

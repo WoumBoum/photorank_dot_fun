@@ -10,6 +10,9 @@ from datetime import datetime
 import boto3
 from botocore.client import Config
 from dotenv import load_dotenv
+import csv
+import io
+import requests
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Query
 
@@ -30,7 +33,7 @@ def get_current_user_optional(
     """Get current user if authenticated, otherwise return None"""
     if credentials is None:
         return None
-    
+
     token = credentials.credentials
     try:
         payload = jwt.decode(token, settings.secret_key, algorithms=[settings.algorithm])
@@ -39,9 +42,20 @@ def get_current_user_optional(
             return None
     except JWTError:
         return None
-    
+
     user = db.query(User).filter(User.id == user_id).first()
     return user
+
+
+def is_admin_user(user: User) -> bool:
+    """Check if the current user is an admin based on environment variables"""
+    mod_provider = os.getenv("MODERATOR_PROVIDER")
+    mod_provider_id = os.getenv("MODERATOR_PROVIDER_ID")
+    return bool(
+        mod_provider and mod_provider_id
+        and user.provider == mod_provider
+        and str(user.provider_id) == str(mod_provider_id)
+    )
 
 router = APIRouter(prefix="/photos", tags=['Photos'])
 
@@ -620,3 +634,136 @@ async def delete_photo_as_category_owner(
     db.commit()
 
     return {"message": "Photo deleted successfully"}
+
+
+@router.post("/upload/admin/batch", response_model=List[PhotoOut])
+async def upload_photos_admin_batch(
+    request: Request,
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Admin-only: Upload photos from CSV with custom ELO ratings"""
+    # Check if user is admin
+    if not is_admin_user(current_user):
+        raise HTTPException(status_code=403, detail="Admin access required")
+
+    selected_category_id = request.session.get("selected_category_id")
+    if not selected_category_id:
+        raise HTTPException(status_code=400, detail="No category selected")
+
+    # Validate file type
+    if not file.filename.endswith('.csv'):
+        raise HTTPException(status_code=400, detail="File must be a CSV file")
+
+    # Read and parse CSV
+    content = await file.read()
+    content_str = content.decode('utf-8')
+    csv_reader = csv.DictReader(io.StringIO(content_str))
+
+    # Validate CSV headers
+    required_headers = {'image_url', 'elo'}
+    if not required_headers.issubset(set(csv_reader.fieldnames or [])):
+        raise HTTPException(
+            status_code=400,
+            detail="CSV must contain 'image_url' and 'elo' columns"
+        )
+
+    # Parse and validate rows
+    photos_to_create = []
+    for row_num, row in enumerate(csv_reader, start=2):  # Start at 2 to account for header
+        image_url = row.get('image_url', '').strip()
+        elo_str = row.get('elo', '').strip()
+
+        if not image_url:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Row {row_num}: image_url cannot be empty"
+            )
+
+        try:
+            elo = float(elo_str)
+            if elo < 0 or elo > 4000:
+                raise ValueError("ELO must be between 0 and 4000")
+        except ValueError:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Row {row_num}: Invalid ELO rating '{elo_str}'"
+            )
+
+        photos_to_create.append({'image_url': image_url, 'elo': elo})
+
+    if not photos_to_create:
+        raise HTTPException(status_code=400, detail="No valid photos found in CSV")
+
+    # Validate category
+    category = db.query(Category).filter(Category.id == selected_category_id).first()
+    if not category:
+        raise HTTPException(status_code=400, detail="Invalid category")
+
+    created_photos = []
+    try:
+        for photo_data in photos_to_create:
+            # Download image from URL
+            try:
+                response = requests.get(photo_data['image_url'], timeout=30)
+                response.raise_for_status()
+                image_content = response.content
+                content_type = response.headers.get('content-type', 'image/jpeg')
+
+                if not content_type.startswith('image/'):
+                    raise HTTPException(
+                        status_code=400,
+                        detail=f"URL {photo_data['image_url']} does not point to an image"
+                    )
+            except requests.RequestException as e:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Failed to download image from {photo_data['image_url']}: {str(e)}"
+                )
+
+            # Generate unique filename
+            file_extension = Path(photo_data['image_url']).suffix or '.jpg'
+            filename = f"{uuid.uuid4()}{file_extension}"
+
+            # Upload to R2
+            s3_client.put_object(
+                Bucket=R2_BUCKET_NAME,
+                Key=filename,
+                Body=image_content,
+                ContentType=content_type
+            )
+
+            # Create photo record with custom ELO
+            photo = Photo(
+                filename=filename,
+                owner_id=current_user.id,
+                category_id=selected_category_id,
+                elo_rating=photo_data['elo']
+            )
+            db.add(photo)
+            created_photos.append(photo)
+
+        db.commit()
+        for p in created_photos:
+            db.refresh(p)
+
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Failed to upload photos: {str(e)}")
+
+    return [
+        PhotoOut(
+            id=p.id,
+            filename=p.filename,
+            elo_rating=p.elo_rating,
+            total_duels=p.total_duels,
+            wins=p.wins,
+            created_at=p.created_at,
+            owner_id=p.owner_id,
+            owner_username=current_user.username,
+            category_id=p.category_id,
+            category_name=category.name
+        )
+        for p in created_photos
+    ]
