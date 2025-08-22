@@ -75,19 +75,38 @@ def upload_redirect():
 
 @app.get("/{category_name}/upload", response_class=HTMLResponse)
 def upload_by_category(category_name: str, request: Request):
-    from .oauth2 import get_current_user_optional
     from .database import get_db
     from .routers.photos import is_admin_user
+    from .models import User
+    from .config import settings
+    from jose import JWTError, jwt
+    import os
 
     context = {"request": request, "category_name": category_name}
     context.update(get_category_context(request))
 
     # Check if user is admin
-    db = next(get_db())
-    current_user = get_current_user_optional(request=request, db=db)
     is_admin = False
-    if current_user:
-        is_admin = is_admin_user(current_user)
+    try:
+        # Get token from localStorage (frontend) or Authorization header
+        token = None
+        if "authorization" in request.headers:
+            auth_header = request.headers["authorization"]
+            if auth_header.startswith("Bearer "):
+                token = auth_header[7:]  # Remove "Bearer " prefix
+
+        if token:
+            payload = jwt.decode(token, settings.secret_key, algorithms=[settings.algorithm])
+            user_id = payload.get("user_id")
+            if user_id:
+                db = next(get_db())
+                current_user = db.query(User).filter(User.id == user_id).first()
+                if current_user:
+                    is_admin = is_admin_user(current_user)
+    except (JWTError, Exception):
+        # If token is invalid or any error occurs, user is not admin
+        is_admin = False
+
     context["is_admin"] = is_admin
 
     return templates.TemplateResponse("upload.html", context)
