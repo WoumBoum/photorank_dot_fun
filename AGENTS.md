@@ -145,15 +145,129 @@ docker compose -f docker-compose-dev.yml up -d
 # Access app
 http://localhost:9001
 
-# Database access
-psql -h localhost -p 5433 -U postgres -d fastapi_test
+ # Database access
+ psql -h localhost -p 5433 -U postgres -d fastapi_test
+ ```
+
+## 🗃️ **Database Access with psql**
+Future agents can interact directly with the Supabase PostgreSQL database using psql commands. This is useful for debugging, data analysis, and manual database operations.
+
+### **Prerequisites**
+1. **Install psql**: `sudo apt-get install postgresql-client` (Ubuntu/Debian)
+2. **Environment Variables**: Ensure `DATABASE_URL` is set in your environment
+3. **Network Access**: Ensure you can connect to the Supabase database
+
+### **Basic Connection**
+```bash
+# Connect to database
+psql "$DATABASE_URL"
+
+# Or run a single command
+psql "$DATABASE_URL" -c "SELECT version();"
 ```
 
-### **Making Changes**
-1. **Always test**: Run `python test_basic.py` before committing
-2. **Follow design**: Maintain brutalist aesthetic
-3. **Preserve simplicity**: No new features without strong justification
-4. **Test edge cases**: Especially rate limiting and ELO calculations
+### **Common Database Queries**
+
+**Check Database Health:**
+```bash
+# Check PostgreSQL version
+psql "$DATABASE_URL" -c "SELECT version();"
+
+# Check database size
+psql "$DATABASE_URL" -c "SELECT pg_size_pretty(pg_database_size(current_database()));"
+
+# Check table sizes
+psql "$DATABASE_URL" -c "SELECT schemaname, tablename, pg_size_pretty(pg_total_relation_size(schemaname||'.'||tablename)) as size FROM pg_tables WHERE schemaname = 'public' ORDER BY pg_total_relation_size(schemaname||'.'||tablename) DESC;"
+```
+
+**Categories Management:**
+```bash
+# List all categories
+psql "$DATABASE_URL" -c "SELECT id, name, description, created_at FROM categories ORDER BY name;"
+
+# Count photos per category
+psql "$DATABASE_URL" -c "SELECT c.name, COUNT(p.id) as photo_count FROM categories c LEFT JOIN photos p ON c.id = p.category_id GROUP BY c.id, c.name ORDER BY photo_count DESC;"
+
+# Find empty categories
+psql "$DATABASE_URL" -c "SELECT c.name FROM categories c LEFT JOIN photos p ON c.id = p.category_id WHERE p.id IS NULL;"
+```
+
+**Photos Management:**
+```bash
+# Count total photos
+psql "$DATABASE_URL" -c "SELECT COUNT(*) FROM photos;"
+
+# Find orphaned photos (photos with deleted categories)
+psql "$DATABASE_URL" -c "SELECT COUNT(*) FROM photos p LEFT JOIN categories c ON p.category_id = c.id WHERE c.id IS NULL;"
+
+# List orphaned photos with details
+psql "$DATABASE_URL" -c "SELECT p.id, p.filename, u.username, p.created_at FROM photos p LEFT JOIN categories c ON p.category_id = c.id LEFT JOIN users u ON p.owner_id = u.id WHERE c.id IS NULL ORDER BY p.created_at DESC LIMIT 10;"
+
+# Clean up orphaned photos
+psql "$DATABASE_URL" -c "DELETE FROM photos WHERE id IN (SELECT p.id FROM photos p LEFT JOIN categories c ON p.category_id = c.id WHERE c.id IS NULL);"
+```
+
+**Users Management:**
+```bash
+# Count total users
+psql "$DATABASE_URL" -c "SELECT COUNT(*) FROM users;"
+
+# List recent users
+psql "$DATABASE_URL" -c "SELECT id, username, email, created_at FROM users ORDER BY created_at DESC LIMIT 10;"
+
+# Count photos per user
+psql "$DATABASE_URL" -c "SELECT u.username, COUNT(p.id) as photo_count FROM users u LEFT JOIN photos p ON u.id = p.owner_id GROUP BY u.id, u.username ORDER BY photo_count DESC LIMIT 10;"
+```
+
+**Votes Management:**
+```bash
+# Count total votes
+psql "$DATABASE_URL" -c "SELECT COUNT(*) FROM votes;"
+
+# Find most active voters
+psql "$DATABASE_URL" -c "SELECT u.username, COUNT(v.id) as vote_count FROM users u JOIN votes v ON u.id = v.user_id GROUP BY u.id, u.username ORDER BY vote_count DESC LIMIT 10;"
+
+# Find most voted photos
+psql "$DATABASE_URL" -c "SELECT p.filename, COUNT(v.id) as vote_count FROM photos p JOIN votes v ON p.id = v.winner_id OR p.id = v.loser_id GROUP BY p.id, p.filename ORDER BY vote_count DESC LIMIT 10;"
+```
+
+### **Foreign Key Constraints**
+```bash
+# Check all constraints
+psql "$DATABASE_URL" -c "SELECT conname, conrelid::regclass, confrelid::regclass, confdeltype FROM pg_constraint WHERE contype = 'f' AND connamespace = 'public'::regnamespace;"
+
+# Check photos category constraint specifically
+psql "$DATABASE_URL" -c "SELECT conname, confdeltype FROM pg_constraint WHERE conname = 'photos_category_id_fkey';"
+# confdeltype should be 'c' for CASCADE
+```
+
+### **Safety Precautions**
+- **Always backup before destructive operations**: `pg_dump "$DATABASE_URL" > backup.sql`
+- **Test queries first**: Use `SELECT` before `DELETE` or `UPDATE`
+- **Use transactions for complex operations**: `BEGIN; ... COMMIT;`
+- **Check row counts**: Always verify how many rows will be affected
+- **Monitor database size**: Large operations can impact performance
+
+### **Troubleshooting**
+```bash
+# Check connection
+psql "$DATABASE_URL" -c "SELECT 1;"
+
+# Check if database is accessible
+psql "$DATABASE_URL" -c "SELECT current_database(), current_user;"
+
+# Check table existence
+psql "$DATABASE_URL" -c "SELECT tablename FROM pg_tables WHERE schemaname = 'public';"
+```
+
+### **Environment Setup**
+```bash
+# Set DATABASE_URL (example)
+export DATABASE_URL="postgresql://username:password@host:port/database"
+
+# Or use .env file (already configured)
+# The application automatically loads DATABASE_URL from environment
+```
 
 ## 🛠️ **Build/Lint/Test Commands**
 
