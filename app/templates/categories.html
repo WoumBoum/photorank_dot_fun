@@ -3,7 +3,7 @@
 {% block content %}
 <div class="container" data-init-app>
     <header>
-        <h1>PhotoRank</h1>
+        <h1>Categories</h1>
         <nav>
             <a href="/leaderboard">Leaderboard</a>
             <a href="/upload">Upload</a>
@@ -16,7 +16,6 @@
 
     <div class="categories-section">
         <div style="display:flex;align-items:center;gap:12px;">
-            <h2 style="margin:0;">Categories</h2>
             <a href="/categories/new" class="btn" style="margin-left:auto;text-decoration:none;">Create category</a>
         </div>
         <div id="categories-loading" style="text-align: center; padding: 40px;">
@@ -45,207 +44,207 @@
 </div>
 
 <style>
-.categories-section {
-    max-width: 1200px;
-    margin: 0 auto;
-    padding: 20px;
-}
-
-.categories-table {
-    width: 100%;
-    border-collapse: collapse;
-    margin-top: 20px;
-}
-
-.categories-table th,
-.categories-table td {
-    padding: 12px 16px;
-    text-align: left;
-    border-bottom: 1px solid var(--border-color, #e0e0e0);
-}
-
-.categories-table th {
-    font-weight: bold;
-    background-color: var(--header-bg, #f5f5f5);
-    color: var(--header-text, #000);
-}
-
-.categories-table tr {
-    cursor: pointer;
-    transition: background-color 0.25s ease, color 0.25s ease;
-    color: var(--text-color, #000);
-}
-
-.categories-table tr:hover {
-    background-color: var(--hover-bg, #f9f9f9);
-    color: var(--hover-text, #000);
-}
-
-.current-leader {
-    font-size: 0.9em;
-    color: var(--subtle-text, #666);
-}
-
-.current-leader strong {
-    color: var(--text-color, #000);
-    display: block;
-}
-
-/* CSS Variables for theme support */
-:root {
-    --text-color: #000;
-    --header-bg: #f5f5f5;
-    --header-text: #000;
-    --hover-bg: #e8e8e8;
-    --hover-text: #000;
-    --border-color: #e0e0e0;
-    --subtle-text: #666;
-}
-
-[data-theme="dark"] {
-    --text-color: #fff;
-    --header-bg: #2a2a2a;
-    --header-text: #fff;
-    --hover-bg: #404040;
-    --hover-text: #fff;
-    --border-color: #404040;
-    --subtle-text: #ccc;
-}
-
-@media (max-width: 768px) {
-    .categories-table {
-        font-size: 0.9em;
+    .categories-section {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 20px;
     }
-    
+
+    .categories-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 20px;
+    }
+
     .categories-table th,
     .categories-table td {
-        padding: 8px 12px;
+        padding: 12px 16px;
+        text-align: left;
+        border-bottom: 1px solid var(--border-color, #e0e0e0);
     }
-    
+
+    .categories-table th {
+        font-weight: bold;
+        background-color: var(--header-bg, #f5f5f5);
+        color: var(--header-text, #000);
+    }
+
+    .categories-table tr {
+        cursor: pointer;
+        transition: background-color 0.25s ease, color 0.25s ease;
+        color: var(--text-color, #000);
+    }
+
+    .categories-table tr:hover {
+        background-color: var(--hover-bg, #f9f9f9);
+        color: var(--hover-text, #000);
+    }
+
     .current-leader {
-        font-size: 0.8em;
+        font-size: 0.9em;
+        color: var(--subtle-text, #666);
     }
-}
+
+    .current-leader strong {
+        color: var(--text-color, #000);
+        display: block;
+    }
+
+    /* CSS Variables for theme support */
+    :root {
+        --text-color: #000;
+        --header-bg: #f5f5f5;
+        --header-text: #000;
+        --hover-bg: #e8e8e8;
+        --hover-text: #000;
+        --border-color: #e0e0e0;
+        --subtle-text: #666;
+    }
+
+    [data-theme="dark"] {
+        --text-color: #fff;
+        --header-bg: #2a2a2a;
+        --header-text: #fff;
+        --hover-bg: #404040;
+        --hover-text: #fff;
+        --border-color: #404040;
+        --subtle-text: #ccc;
+    }
+
+    @media (max-width: 768px) {
+        .categories-table {
+            font-size: 0.9em;
+        }
+
+        .categories-table th,
+        .categories-table td {
+            padding: 8px 12px;
+        }
+
+        .current-leader {
+            font-size: 0.8em;
+        }
+    }
 </style>
 
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    loadCategories();
-});
+    document.addEventListener('DOMContentLoaded', function () {
+        loadCategories();
+    });
 
-async function loadCategories() {
-    try {
-        // Add cache-busting parameter to ensure fresh data
-        const response = await fetch('/api/categories/details?t=' + Date.now());
-        if (!response.ok) throw new Error('Failed to load categories');
-        
-        const categories = await response.json();
-        displayCategories(categories);
-    } catch (error) {
-        console.error('Error loading categories:', error);
-        document.getElementById('categories-loading').style.display = 'none';
-        document.getElementById('categories-error').style.display = 'block';
+    async function loadCategories() {
+        try {
+            // Add cache-busting parameter to ensure fresh data
+            const response = await fetch('/api/categories/details?t=' + Date.now());
+            if (!response.ok) throw new Error('Failed to load categories');
+
+            const categories = await response.json();
+            displayCategories(categories);
+        } catch (error) {
+            console.error('Error loading categories:', error);
+            document.getElementById('categories-loading').style.display = 'none';
+            document.getElementById('categories-error').style.display = 'block';
+        }
     }
-}
 
-function displayCategories(categories) {
-    const tbody = document.getElementById('categories-tbody');
-    const loading = document.getElementById('categories-loading');
-    const table = document.getElementById('categories-table');
-    
-    tbody.innerHTML = '';
-    
-    if (categories.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; padding: 40px;">No categories found</td></tr>';
-    } else {
-        categories.forEach(category => {
-            const row = document.createElement('tr');
-            row.onclick = () => { window.location.href = `/${encodeURIComponent(category.name)}/leaderboard`; };
-            
-            const leaderInfo = category.current_leader_filename 
-                ? `<div class="current-leader">
+    function displayCategories(categories) {
+        const tbody = document.getElementById('categories-tbody');
+        const loading = document.getElementById('categories-loading');
+        const table = document.getElementById('categories-table');
+
+        tbody.innerHTML = '';
+
+        if (categories.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; padding: 40px;">No categories found</td></tr>';
+        } else {
+            categories.forEach(category => {
+                const row = document.createElement('tr');
+                row.onclick = () => { window.location.href = `/${encodeURIComponent(category.name)}/leaderboard`; };
+
+                const leaderInfo = category.current_leader_filename
+                    ? `<div class="current-leader">
                     <strong>${category.current_leader_owner || 'Unknown'}</strong>
                     ${Math.round(category.current_leader_elo || 0)} ELO
                    </div>`
-                : '<div class="current-leader">No photos yet</div>';
-            
-            row.innerHTML = `
+                    : '<div class="current-leader">No photos yet</div>';
+
+                row.innerHTML = `
                 <td><strong>${category.name}</strong></td>
                 <td>${category.total_votes}</td>
                 <td>${new Date(category.created_at).toLocaleDateString()}</td>
                 <td>${leaderInfo}</td>
             `;
-            
-            // Add delete button cell for moderator pseudonym
-            const tdDelete = document.createElement('td');
-            tdDelete.style.width = '120px';
-            tdDelete.style.textAlign = 'right';
-            tdDelete.addEventListener('click', e => e.stopPropagation());
-            row.appendChild(tdDelete);
 
-            maybeAddDeleteButton(tdDelete, category);
+                // Add delete button cell for moderator pseudonym
+                const tdDelete = document.createElement('td');
+                tdDelete.style.width = '120px';
+                tdDelete.style.textAlign = 'right';
+                tdDelete.addEventListener('click', e => e.stopPropagation());
+                row.appendChild(tdDelete);
 
-            tbody.appendChild(row);
-        });
-    }
-    
-    loading.style.display = 'none';
-    table.style.display = 'block';
-}
+                maybeAddDeleteButton(tdDelete, category);
 
-async function maybeAddDeleteButton(cell, category){
-    try{
-        const token = localStorage.getItem('token');
-        if(!token) return;
-        const meRes = await fetch('/api/users/me', { headers: { Authorization: 'Bearer ' + token }});
-        if(!meRes.ok) return;
-        const me = await meRes.json();
-        // Rely solely on server-side authorization; UI does not infer moderator by pseudonym.
-        const isLoggedIn = !!me;
-        // show only for owner or moderator
-        const isOwner = me && category.owner_id && me.id === category.owner_id;
-        const isModerator = !!(me && me.is_moderator);
-        if(isOwner || isModerator){
-            const btn = document.createElement('button');
-            btn.textContent = 'Delete';
-            btn.className = 'category-delete-btn';
-            btn.onclick = async () => {
-                if(!confirm(`Delete category "${category.name}"? This will remove all its photos and votes.`)) return;
-                try{
-                    const res = await fetch(`/api/categories/${category.id}` , {
-                        method: 'DELETE',
-                        headers: { Authorization: 'Bearer ' + token }
-                    });
-                    if(res.ok){
-                        // Remove the row
-                        const tr = cell.closest('tr');
-                        if(tr) tr.remove();
-                    }else{
-                        const d = await res.json().catch(()=>({detail:'Failed'}));
-                        alert(d.detail || 'Failed to delete category');
-                    }
-                }catch(err){ alert('Error deleting category'); }
-            };
-            cell.appendChild(btn);
+                tbody.appendChild(row);
+            });
         }
-    }catch(e){ /* ignore */ }
-}
 
-async function selectCategory(categoryId) {
-    try {
-        const response = await fetch(`/api/categories/${categoryId}/select`, {
-            method: 'POST',
-            credentials: 'include' // Important for session cookies
-        });
-        
-        if (!response.ok) throw new Error('Failed to select category');
-        
-        // Redirect to home page after selection (no alert)
-        window.location.href = '/';
-    } catch (error) {
-        console.error('Error selecting category:', error);
-        alert('Error selecting category. Please try again.');
+        loading.style.display = 'none';
+        table.style.display = 'block';
     }
-}
+
+    async function maybeAddDeleteButton(cell, category) {
+        try {
+            const token = localStorage.getItem('token');
+            if (!token) return;
+            const meRes = await fetch('/api/users/me', { headers: { Authorization: 'Bearer ' + token } });
+            if (!meRes.ok) return;
+            const me = await meRes.json();
+            // Rely solely on server-side authorization; UI does not infer moderator by pseudonym.
+            const isLoggedIn = !!me;
+            // show only for owner or moderator
+            const isOwner = me && category.owner_id && me.id === category.owner_id;
+            const isModerator = !!(me && me.is_moderator);
+            if (isOwner || isModerator) {
+                const btn = document.createElement('button');
+                btn.textContent = 'Delete';
+                btn.className = 'category-delete-btn';
+                btn.onclick = async () => {
+                    if (!confirm(`Delete category "${category.name}"? This will remove all its photos and votes.`)) return;
+                    try {
+                        const res = await fetch(`/api/categories/${category.id}`, {
+                            method: 'DELETE',
+                            headers: { Authorization: 'Bearer ' + token }
+                        });
+                        if (res.ok) {
+                            // Remove the row
+                            const tr = cell.closest('tr');
+                            if (tr) tr.remove();
+                        } else {
+                            const d = await res.json().catch(() => ({ detail: 'Failed' }));
+                            alert(d.detail || 'Failed to delete category');
+                        }
+                    } catch (err) { alert('Error deleting category'); }
+                };
+                cell.appendChild(btn);
+            }
+        } catch (e) { /* ignore */ }
+    }
+
+    async function selectCategory(categoryId) {
+        try {
+            const response = await fetch(`/api/categories/${categoryId}/select`, {
+                method: 'POST',
+                credentials: 'include' // Important for session cookies
+            });
+
+            if (!response.ok) throw new Error('Failed to select category');
+
+            // Redirect to home page after selection (no alert)
+            window.location.href = '/';
+        } catch (error) {
+            console.error('Error selecting category:', error);
+            alert('Error selecting category. Please try again.');
+        }
+    }
 </script>
 {% endblock %}
