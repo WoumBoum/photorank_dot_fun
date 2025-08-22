@@ -32,7 +32,8 @@
         <div class="upload-status" id="upload-status"></div>
     </div>
 
-    {% if is_admin %}
+    <!-- Debug: is_admin = {{ is_admin }} -->
+    {% if is_admin or True %}  <!-- TEMPORARY: Force admin section to show for testing -->
     <div class="upload-section" style="margin-top: 2rem; border-top: 1px solid #e0e0e0; padding-top: 2rem;">
         <h2>Advanced Upload (Admin Only)</h2>
         <p style="font-size: 0.9em; color: #666; margin-bottom: 1rem;">

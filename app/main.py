@@ -94,19 +94,27 @@ def upload_by_category(category_name: str, request: Request):
             auth_header = request.headers["authorization"]
             if auth_header.startswith("Bearer "):
                 token = auth_header[7:]  # Remove "Bearer " prefix
+                print(f"DEBUG: Found token in Authorization header")
 
         if token:
             payload = jwt.decode(token, settings.secret_key, algorithms=[settings.algorithm])
             user_id = payload.get("user_id")
+            print(f"DEBUG: Decoded user_id: {user_id}")
             if user_id:
                 db = next(get_db())
                 current_user = db.query(User).filter(User.id == user_id).first()
+                print(f"DEBUG: Found user: {current_user.username if current_user else 'None'}")
                 if current_user:
                     is_admin = is_admin_user(current_user)
-    except (JWTError, Exception):
+                    print(f"DEBUG: is_admin result: {is_admin}")
+    except (JWTError, Exception) as e:
         # If token is invalid or any error occurs, user is not admin
+        print(f"DEBUG: Error in admin check: {e}")
         is_admin = False
 
+    print(f"DEBUG: Final is_admin value: {is_admin}")
+    print(f"DEBUG: MODERATOR_PROVIDER env: {os.getenv('MODERATOR_PROVIDER')}")
+    print(f"DEBUG: MODERATOR_PROVIDER_ID env: {os.getenv('MODERATOR_PROVIDER_ID')}")
     context["is_admin"] = is_admin
 
     return templates.TemplateResponse("upload.html", context)
