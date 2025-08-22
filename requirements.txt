@@ -23,6 +23,7 @@ jinja2==3.1.2
 
 # Environment variables
 python-dotenv==1.0.0
+pydantic-settings==2.10.1
 
 # AWS S3 compatible storage (R2)
 boto3==1.26.137
