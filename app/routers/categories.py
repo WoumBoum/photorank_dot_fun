@@ -51,7 +51,7 @@ def create_category(payload, db, current_user):
 def get_categories_with_details(db):
     """Get all categories with aggregated data including votes and current leader"""
 
-    # First, get all valid categories (exclude any that might have issues)
+    # Get all categories with their basic info
     categories = db.query(Category).all()
 
     result = []
@@ -70,20 +70,21 @@ def get_categories_with_details(db):
         ).filter(Photo.category_id == category.id
         ).order_by(Photo.elo_rating.desc()).first()
 
-        # Build the result for this category
-        category_data = {
+        # Create a dictionary that matches the CategoryDetail schema
+        # Use the same structure but ensure proper types
+        category_dict = {
             "id": category.id,
             "name": category.name,
             "description": category.description,
             "created_at": category.created_at,
-            "total_votes": int((vote_count / 2) + (category.boosted_votes or 0)),  # Total votes as integer
+            "total_votes": int((vote_count / 2) + (category.boosted_votes or 0)),
             "owner_id": category.owner_id,
             "current_leader_filename": leader_query.filename if leader_query else None,
-            "current_leader_elo": leader_query.elo_rating if leader_query else None,
+            "current_leader_elo": float(leader_query.elo_rating) if leader_query and leader_query.elo_rating else None,
             "current_leader_owner": leader_query.owner_username if leader_query else None
         }
 
-        result.append(category_data)
+        result.append(category_dict)
 
     # Sort by total votes descending, then by name
     result.sort(key=lambda x: (-x['total_votes'], x['name']))
