@@ -50,45 +50,47 @@ def create_category(payload, db, current_user):
 @router.get("/details", response_model=List[CategoryDetail])
 def get_categories_with_details(db):
     """Get all categories with aggregated data including votes and current leader"""
-    
-    # Subquery to get vote counts per category (divide by 2 to fix double counting)
-    vote_counts = db.query(
-        Photo.category_id,
-        (func.count(Vote.id) / 2).label('total_votes')
-    ).join(Vote, (Vote.winner_id == Photo.id) | (Vote.loser_id == Photo.id)
-    ).group_by(Photo.category_id).subquery()
-    
-    # Subquery to get current leader per category
-    leaders = db.query(
-        Photo.category_id,
-        Photo.filename,
-        Photo.elo_rating,
-        User.username.label('owner_username'),
-        func.row_number().over(
-            partition_by=Photo.category_id,
-            order_by=Photo.elo_rating.desc()
-        ).label('rank')
-    ).join(User, Photo.owner_id == User.id
-    ).subquery()
-    
-    # Main query combining all data
-    categories = db.query(
-        Category.id,
-        Category.name,
-        Category.description,
-        Category.created_at,
-        func.coalesce(vote_counts.c.total_votes, 0).label('raw_total_votes'),
-        func.coalesce(Category.boosted_votes, 0).label('boosted_votes'),
-        (func.coalesce(vote_counts.c.total_votes, 0) + func.coalesce(Category.boosted_votes, 0)).label('total_votes'),
-        Category.owner_id.label('owner_id'),
-        leaders.c.filename.label('current_leader_filename'),
-        leaders.c.elo_rating.label('current_leader_elo'),
-        leaders.c.owner_username.label('current_leader_owner')
-    ).outerjoin(vote_counts, Category.id == vote_counts.c.category_id
-    ).outerjoin(leaders, (Category.id == leaders.c.category_id) & (leaders.c.rank == 1)
-    ).order_by((func.coalesce(vote_counts.c.total_votes, 0) + func.coalesce(Category.boosted_votes, 0)).desc(), Category.name.asc()).all()
-    
-    return categories
+
+    # First, get all valid categories (exclude any that might have issues)
+    categories = db.query(Category).all()
+
+    result = []
+    for category in categories:
+        # Get vote count for this category (only from photos that have valid categories)
+        vote_count = db.query(func.count(Vote.id)).select_from(
+            Vote.join(Photo, (Vote.winner_id == Photo.id) | (Vote.loser_id == Photo.id))
+        ).filter(Photo.category_id == category.id).scalar() or 0
+
+        # Get the current leader for this category
+        leader_query = db.query(
+            Photo.filename,
+            Photo.elo_rating,
+            User.username.label('owner_username')
+        ).join(User, Photo.owner_id == User.id
+        ).filter(Photo.category_id == category.id
+        ).order_by(Photo.elo_rating.desc()).first()
+
+        # Build the result for this category
+        category_data = {
+            "id": category.id,
+            "name": category.name,
+            "description": category.description,
+            "created_at": category.created_at,
+            "raw_total_votes": vote_count / 2,  # Divide by 2 to fix double counting
+            "boosted_votes": category.boosted_votes or 0,
+            "total_votes": (vote_count / 2) + (category.boosted_votes or 0),
+            "owner_id": category.owner_id,
+            "current_leader_filename": leader_query.filename if leader_query else None,
+            "current_leader_elo": leader_query.elo_rating if leader_query else None,
+            "current_leader_owner": leader_query.owner_username if leader_query else None
+        }
+
+        result.append(category_data)
+
+    # Sort by total votes descending, then by name
+    result.sort(key=lambda x: (-x['total_votes'], x['name']))
+
+    return result
 
 
 @router.post("/{category_id}/select")
