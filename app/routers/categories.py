@@ -68,7 +68,7 @@ def test_categories():
     ]
 
 @router.get("/details")
-def get_categories_with_details(db):
+def get_categories_with_details(db: Session = Depends(get_db)):
     """Get all categories with aggregated data including votes and current leader"""
 
     print("=== CATEGORIES DETAILS DEBUG ===")
