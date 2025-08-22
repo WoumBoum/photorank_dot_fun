@@ -22,14 +22,14 @@ def is_site_moderator(user):
 
 
 @router.get("/", response_model=List[CategoryOut])
-def get_categories(db):
+def get_categories(db: Session = Depends(get_db)):
     """Get all available categories"""
     categories = db.query(Category).all()
     return categories
 
 
 @router.post("/create", status_code=status.HTTP_201_CREATED)
-def create_category(payload, db, current_user):
+def create_category(payload, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     """Create a new category (auth required). Names: [A-Za-z0-9_-], 2-40 chars, unique."""
     name = payload.name.strip()
     # Case-insensitive uniqueness check
@@ -99,16 +99,16 @@ def get_categories_with_details(db: Session = Depends(get_db)):
                 "current_leader_owner": None
             }
 
-            print(f"  - ID: {category_dict['id']}")
-            print(f"  - Name: {category_dict['name']}")
-            print(f"  - Description: {category_dict['description']}")
-            print(f"  - Created At: {category_dict['created_at']}")
-            print(f"  - Total Votes: {category_dict['total_votes']}")
-            print(f"  - Owner ID: {category_dict['owner_id']}")
+            print("  - ID: {}".format(category_dict['id']))
+            print("  - Name: {}".format(category_dict['name']))
+            print("  - Description: {}".format(category_dict['description']))
+            print("  - Created At: {}".format(category_dict['created_at']))
+            print("  - Total Votes: {}".format(category_dict['total_votes']))
+            print("  - Owner ID: {}".format(category_dict['owner_id']))
 
             result.append(category_dict)
 
-        print(f"Successfully created response with {len(result)} categories")
+        print("Successfully created response with {} categories".format(len(result)))
         print("Response data:", result)
         print("=== END CATEGORIES DETAILS DEBUG ===")
 
@@ -116,8 +116,8 @@ def get_categories_with_details(db: Session = Depends(get_db)):
 
     except Exception as e:
         print("=== ERROR IN CATEGORIES DETAILS ===")
-        print(f"Exception type: {type(e).__name__}")
-        print(f"Exception message: {str(e)}")
+        print("Exception type: {}".format(type(e).__name__))
+        print("Exception message: {}".format(str(e)))
         import traceback
         print("Full traceback:")
         traceback.print_exc()
