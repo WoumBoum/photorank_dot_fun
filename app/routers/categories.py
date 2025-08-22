@@ -76,9 +76,7 @@ def get_categories_with_details(db):
             "name": category.name,
             "description": category.description,
             "created_at": category.created_at,
-            "raw_total_votes": vote_count / 2,  # Divide by 2 to fix double counting
-            "boosted_votes": category.boosted_votes or 0,
-            "total_votes": (vote_count / 2) + (category.boosted_votes or 0),
+            "total_votes": int((vote_count / 2) + (category.boosted_votes or 0)),  # Total votes as integer
             "owner_id": category.owner_id,
             "current_leader_filename": leader_query.filename if leader_query else None,
             "current_leader_elo": leader_query.elo_rating if leader_query else None,
