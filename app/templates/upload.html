@@ -32,11 +32,8 @@
     <div class="upload-status" id="upload-status"></div>
   </div>
 
-  <!-- Debug: is_admin = {{ is_admin }} -->
-  <!-- Debug: category_name = {{ category_name }} -->
-  <!-- Debug: selected_category_name = {{ selected_category_name }} -->
-  {% if is_admin or True %} <!-- TEMPORARY: Force admin section to show for testing -->
-  <div class="upload-section" style="margin-top: 2rem; border-top: 1px solid #e0e0e0; padding-top: 2rem;">
+
+  <div class="upload-section" id="admin-upload-section" style="margin-top: 2rem; border-top: 1px solid #e0e0e0; padding-top: 2rem; display: none;">
     <h2>Advanced Upload (Admin Only)</h2>
     <p style="font-size: 0.9em; color: #666; margin-bottom: 1rem;">
       Upload multiple photos with custom ELO ratings using a CSV file.
@@ -60,7 +57,6 @@
     </div>
     <div class="csv-upload-status" id="csv-upload-status"></div>
   </div>
-  {% endif %}
 </div>
 
 <script>
@@ -83,63 +79,75 @@
       }
     }
 
-    {% if is_admin or True %}
-    // Admin CSV upload functionality
-    console.log('Admin CSV upload script loaded');
+    // Show admin section if user is moderator
+    try {
+      const adminSection = document.getElementById('admin-upload-section');
+      const token = localStorage.getItem('token');
+      if (adminSection && token) {
+        const response = await fetch('/auth/me', { 
+          headers: { 'Authorization': 'Bearer ' + token } 
+        });
+        if (response.ok) {
+          const userInfo = await response.json();
+          if (userInfo.is_moderator) {
+            adminSection.style.display = 'block';
+            
+            // Admin CSV upload functionality
+            console.log('Admin CSV upload script loaded');
 
-    const csvUploadArea = document.getElementById('csv-upload-area');
-    const csvFileInput = document.getElementById('csv-file-input');
-    const csvUploadStatus = document.getElementById('csv-upload-status');
+            const csvUploadArea = document.getElementById('csv-upload-area');
+            const csvFileInput = document.getElementById('csv-file-input');
+            const csvUploadStatus = document.getElementById('csv-upload-status');
 
-    console.log('csvUploadArea:', csvUploadArea);
-    console.log('csvFileInput:', csvFileInput);
-    console.log('csvUploadStatus:', csvUploadStatus);
+            console.log('csvUploadArea:', csvUploadArea);
+            console.log('csvFileInput:', csvFileInput);
+            console.log('csvUploadStatus:', csvUploadStatus);
 
-    if (csvUploadArea) {
-      csvUploadArea.addEventListener('click', () => {
-        console.log('CSV upload area clicked');
-        csvFileInput.click();
-      });
-    } else {
-      console.error('csvUploadArea not found');
-    }
+            if (csvUploadArea) {
+              csvUploadArea.addEventListener('click', () => {
+                console.log('CSV upload area clicked');
+                csvFileInput.click();
+              });
+            } else {
+              console.error('csvUploadArea not found');
+            }
 
-    // Test button for debugging
-    const testBtn = document.getElementById('test-upload-btn');
-    if (testBtn) {
-      testBtn.addEventListener('click', () => {
-        console.log('Test button clicked');
-        csvFileInput.click();
-      });
-    } else {
-      console.error('testBtn not found');
-    }
+            // Test button for debugging
+            const testBtn = document.getElementById('test-upload-btn');
+            if (testBtn) {
+              testBtn.addEventListener('click', () => {
+                console.log('Test button clicked');
+                csvFileInput.click();
+              });
+            } else {
+              console.error('testBtn not found');
+            }
 
-    csvUploadArea.addEventListener('dragover', (e) => {
-      e.preventDefault();
-      csvUploadArea.style.borderColor = '#007bff';
-    });
+            csvUploadArea.addEventListener('dragover', (e) => {
+              e.preventDefault();
+              csvUploadArea.style.borderColor = '#007bff';
+            });
 
-    csvUploadArea.addEventListener('dragleave', () => {
-      csvUploadArea.style.borderColor = '#e0e0e0';
-    });
+            csvUploadArea.addEventListener('dragleave', () => {
+              csvUploadArea.style.borderColor = '#e0e0e0';
+            });
 
-    csvUploadArea.addEventListener('drop', (e) => {
-      e.preventDefault();
-      csvUploadArea.style.borderColor = '#e0e0e0';
-      const files = e.dataTransfer.files;
-      if (files.length > 0 && files[0].name.endsWith('.csv')) {
-        uploadCSV(files[0]);
-      } else {
-        csvUploadStatus.innerHTML = '<p style="color: red;">Please upload a CSV file.</p>';
-      }
-    });
+            csvUploadArea.addEventListener('drop', (e) => {
+              e.preventDefault();
+              csvUploadArea.style.borderColor = '#e0e0e0';
+              const files = e.dataTransfer.files;
+              if (files.length > 0 && files[0].name.endsWith('.csv')) {
+                uploadCSV(files[0]);
+              } else {
+                csvUploadStatus.innerHTML = '<p style="color: red;">Please upload a CSV file.</p>';
+              }
+            });
 
-    csvFileInput.addEventListener('change', (e) => {
-      if (e.target.files.length > 0) {
-        uploadCSV(e.target.files[0]);
-      }
-    });
+            csvFileInput.addEventListener('change', (e) => {
+              if (e.target.files.length > 0) {
+                uploadCSV(e.target.files[0]);
+              }
+            });
 
     async function uploadCSV(file) {
       console.log('uploadCSV called with file:', file);
@@ -169,8 +177,12 @@
       } catch (error) {
         csvUploadStatus.innerHTML = `<p style="color: red;">Error: ${error.message}</p>`;
       }
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Error checking admin status:', error);
     }
-    {% endif %}
   });
 </script>
 {% endblock %}
