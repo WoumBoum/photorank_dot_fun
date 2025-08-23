@@ -149,34 +149,35 @@
               }
             });
 
-    async function uploadCSV(file) {
-      console.log('uploadCSV called with file:', file);
-      csvUploadStatus.innerHTML = '<p>Uploading and processing CSV...</p>';
+            async function uploadCSV(file) {
+              console.log('uploadCSV called with file:', file);
+              csvUploadStatus.innerHTML = '<p>Uploading and processing CSV...</p>';
 
-      const formData = new FormData();
-      formData.append('file', file);
+              const formData = new FormData();
+              formData.append('file', file);
 
-      try {
-        const token = localStorage.getItem('token');
-        console.log('Token from localStorage:', token);
-        const response = await fetch('/api/photos/upload/admin/batch', {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${token}`
-          },
-          body: formData
-        });
+              try {
+                const token = localStorage.getItem('token');
+                console.log('Token from localStorage:', token);
+                const response = await fetch('/api/photos/upload/admin/batch', {
+                  method: 'POST',
+                  headers: {
+                    'Authorization': `Bearer ${token}`
+                  },
+                  body: formData
+                });
 
-        if (response.ok) {
-          const result = await response.json();
-          csvUploadStatus.innerHTML = `<p style="color: green;">Successfully uploaded ${result.length} photos!</p>`;
-        } else {
-          const error = await response.json();
-          csvUploadStatus.innerHTML = `<p style="color: red;">Error: ${error.detail}</p>`;
-        }
-      } catch (error) {
-        csvUploadStatus.innerHTML = `<p style="color: red;">Error: ${error.message}</p>`;
-      }
+                if (response.ok) {
+                  const result = await response.json();
+                  csvUploadStatus.innerHTML = `<p style="color: green;">Successfully uploaded ${result.length} photos!</p>`;
+                } else {
+                  const error = await response.json();
+                  csvUploadStatus.innerHTML = `<p style="color: red;">Error: ${error.detail}</p>`;
+                }
+              } catch (error) {
+                csvUploadStatus.innerHTML = `<p style="color: red;">Error: ${error.message}</p>`;
+              }
+            }
           }
         }
       }
