@@ -2,174 +2,175 @@
 
 {% block content %}
 <div class="container" data-init-app>
-    <header>
-        <h1>Upload</h1>
-        <nav>
-            <a href="/">Vote</a>
-            <a href="/leaderboard">Leaderboard</a>
-            <a href="/stats">Stats</a>
-            <a href="/categories">Categories</a>
-            <a href="/login" id="auth-link">Login</a>
-            <button class="theme-toggle" id="theme-toggle" title="Toggle dark mode">◐</button>
-        </nav>
-    </header>
+  <header>
+    <h1>Upload</h1>
+    <nav>
+      <a href="/">Vote</a>
+      <a href="/leaderboard">Leaderboard</a>
+      <a href="/stats">Stats</a>
+      <a href="/categories">Categories</a>
+      <a href="/login" id="auth-link">Login</a>
+      <button class="theme-toggle" id="theme-toggle" title="Toggle dark mode">◐</button>
+    </nav>
+  </header>
 
-    <div class="upload-section">
-        <h2>Upload a Photo</h2>
-        <div class="current-category">
-            {% if selected_category_name %}
-                <span>Uploading to: <strong>{{ selected_category_name }}</strong></span>
-                <a href="/categories" style="margin-left: 10px; font-size: 0.9em;">Change Category</a>
-            {% else %}
-                <span>No category selected</span>
-                <a href="/categories" style="margin-left: 10px; font-size: 0.9em;">Select Category</a>
-            {% endif %}
-        </div>
-        <div class="upload-area" id="upload-area">
-            <p>Drag & drop or click to upload (up to 10)</p>
-            <input type="file" id="file-input" accept="image/*" multiple style="display: none;">
-        </div>
-        <div class="upload-status" id="upload-status"></div>
+  <div class="upload-section">
+    <h2>Upload a Photo</h2>
+    <div class="current-category">
+      {% if selected_category_name %}
+      <span>Uploading to: <strong>{{ selected_category_name }}</strong></span>
+      <a href="/categories" style="margin-left: 10px; font-size: 0.9em;">Change Category</a>
+      {% else %}
+      <span>No category selected</span>
+      <a href="/categories" style="margin-left: 10px; font-size: 0.9em;">Select Category</a>
+      {% endif %}
     </div>
+    <div class="upload-area" id="upload-area">
+      <p>Drag & drop or click to upload (up to 10)</p>
+      <input type="file" id="file-input" accept="image/*" multiple style="display: none;">
+    </div>
+    <div class="upload-status" id="upload-status"></div>
+  </div>
 
-    <!-- Debug: is_admin = {{ is_admin }} -->
-    <!-- Debug: category_name = {{ category_name }} -->
-    <!-- Debug: selected_category_name = {{ selected_category_name }} -->
-    {% if is_admin or True %}  <!-- TEMPORARY: Force admin section to show for testing -->
-    <div class="upload-section" style="margin-top: 2rem; border-top: 1px solid #e0e0e0; padding-top: 2rem;">
-        <h2>Advanced Upload (Admin Only)</h2>
-        <p style="font-size: 0.9em; color: #666; margin-bottom: 1rem;">
-            Upload multiple photos with custom ELO ratings using a CSV file.
-        </p>
-        <div class="csv-upload-area" id="csv-upload-area" style="border: 2px dashed #e0e0e0; padding: 2rem; text-align: center; border-radius: 4px; margin-bottom: 1rem; cursor: pointer;">
-            <p>Drag & drop CSV file or click to upload</p>
-            <input type="file" id="csv-file-input" accept=".csv" style="display: none;">
-        </div>
-        <button id="test-upload-btn" style="margin-bottom: 1rem;">Test Upload Button</button>
-        <div class="csv-format-info" style="background: #f9f9f9; padding: 1rem; border-radius: 4px; margin-bottom: 1rem;">
-            <h3 style="margin-top: 0; font-size: 1em;">CSV Format:</h3>
-            <p style="font-family: monospace; font-size: 0.9em; margin: 0.5rem 0;">
-                image_url,elo<br>
-                https://example.com/image1.jpg,1500<br>
-                https://example.com/image2.jpg,1200
-            </p>
-            <p style="font-size: 0.8em; color: #666; margin-top: 0.5rem;">
-                ELO ratings must be between 0 and 4000.
-            </p>
-        </div>
-        <div class="csv-upload-status" id="csv-upload-status"></div>
+  <!-- Debug: is_admin = {{ is_admin }} -->
+  <!-- Debug: category_name = {{ category_name }} -->
+  <!-- Debug: selected_category_name = {{ selected_category_name }} -->
+  {% if is_admin or True %} <!-- TEMPORARY: Force admin section to show for testing -->
+  <div class="upload-section" style="margin-top: 2rem; border-top: 1px solid #e0e0e0; padding-top: 2rem;">
+    <h2>Advanced Upload (Admin Only)</h2>
+    <p style="font-size: 0.9em; color: #666; margin-bottom: 1rem;">
+      Upload multiple photos with custom ELO ratings using a CSV file.
+    </p>
+    <div class="csv-upload-area" id="csv-upload-area"
+      style="border: 2px dashed #e0e0e0; padding: 2rem; text-align: center; border-radius: 4px; margin-bottom: 1rem; cursor: pointer;">
+      <p>Drag & drop CSV file or click to upload</p>
+      <input type="file" id="csv-file-input" accept=".csv" style="display: none;">
     </div>
-    {% endif %}
+    <button id="test-upload-btn" style="margin-bottom: 1rem;">Test Upload Button</button>
+    <div class="csv-format-info" style="background: #f9f9f9; padding: 1rem; border-radius: 4px; margin-bottom: 1rem;">
+      <h3 style="margin-top: 0; font-size: 1em;">CSV Format:</h3>
+      <p style="font-family: monospace; font-size: 0.9em; margin: 0.5rem 0;">
+        image_url,elo<br>
+        https://example.com/image1.jpg,1500<br>
+        https://example.com/image2.jpg,1200
+      </p>
+      <p style="font-size: 0.8em; color: #666; margin-top: 0.5rem;">
+        ELO ratings must be between 0 and 4000.
+      </p>
+    </div>
+    <div class="csv-upload-status" id="csv-upload-status"></div>
+  </div>
+  {% endif %}
 </div>
 
 <script>
-document.addEventListener('DOMContentLoaded', async function () {
-  const categoryName = "{{ category_name or '' }}";
-  if (categoryName) {
-    try {
-      await fetch(`/api/categories/select-by-name/${encodeURIComponent(categoryName)}`, { method: 'POST', credentials: 'include' });
-    } catch (e) { console.error('Unable to select category by name', e); }
-    const nav = document.querySelector('header nav');
-    if (nav) {
-      const links = Array.from(nav.querySelectorAll('a'));
-      const relink = (text, path) => {
-        const a = links.find(x => x.textContent.trim() === text);
-        if (a) a.href = `/${encodeURIComponent(categoryName)}/${path}`;
-      };
-      relink('Vote', 'vote');
-      relink('Upload', 'upload');
-      relink('Leaderboard', 'leaderboard');
-    }
-  }
-
-  {% if is_admin %}
-  // Admin CSV upload functionality
-  console.log('Admin CSV upload script loaded');
-
-  const csvUploadArea = document.getElementById('csv-upload-area');
-  const csvFileInput = document.getElementById('csv-file-input');
-  const csvUploadStatus = document.getElementById('csv-upload-status');
-
-  console.log('csvUploadArea:', csvUploadArea);
-  console.log('csvFileInput:', csvFileInput);
-  console.log('csvUploadStatus:', csvUploadStatus);
-
-  if (csvUploadArea) {
-    csvUploadArea.addEventListener('click', () => {
-      console.log('CSV upload area clicked');
-      csvFileInput.click();
-    });
-  } else {
-    console.error('csvUploadArea not found');
-  }
-
-  // Test button for debugging
-  const testBtn = document.getElementById('test-upload-btn');
-  if (testBtn) {
-    testBtn.addEventListener('click', () => {
-      console.log('Test button clicked');
-      csvFileInput.click();
-    });
-  } else {
-    console.error('testBtn not found');
-  }
-
-  csvUploadArea.addEventListener('dragover', (e) => {
-    e.preventDefault();
-    csvUploadArea.style.borderColor = '#007bff';
-  });
-
-  csvUploadArea.addEventListener('dragleave', () => {
-    csvUploadArea.style.borderColor = '#e0e0e0';
-  });
-
-  csvUploadArea.addEventListener('drop', (e) => {
-    e.preventDefault();
-    csvUploadArea.style.borderColor = '#e0e0e0';
-    const files = e.dataTransfer.files;
-    if (files.length > 0 && files[0].name.endsWith('.csv')) {
-      uploadCSV(files[0]);
-    } else {
-      csvUploadStatus.innerHTML = '<p style="color: red;">Please upload a CSV file.</p>';
-    }
-  });
-
-  csvFileInput.addEventListener('change', (e) => {
-    if (e.target.files.length > 0) {
-      uploadCSV(e.target.files[0]);
-    }
-  });
-
-  async function uploadCSV(file) {
-    console.log('uploadCSV called with file:', file);
-    csvUploadStatus.innerHTML = '<p>Uploading and processing CSV...</p>';
-
-    const formData = new FormData();
-    formData.append('file', file);
-
-    try {
-      const token = localStorage.getItem('token');
-      console.log('Token from localStorage:', token);
-      const response = await fetch('/api/photos/upload/admin/batch', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`
-        },
-        body: formData
-      });
-
-      if (response.ok) {
-        const result = await response.json();
-        csvUploadStatus.innerHTML = `<p style="color: green;">Successfully uploaded ${result.length} photos!</p>`;
-      } else {
-        const error = await response.json();
-        csvUploadStatus.innerHTML = `<p style="color: red;">Error: ${error.detail}</p>`;
+  document.addEventListener('DOMContentLoaded', async function () {
+    const categoryName = "{{ category_name or '' }}";
+    if (categoryName) {
+      try {
+        await fetch(`/api/categories/select-by-name/${encodeURIComponent(categoryName)}`, { method: 'POST', credentials: 'include' });
+      } catch (e) { console.error('Unable to select category by name', e); }
+      const nav = document.querySelector('header nav');
+      if (nav) {
+        const links = Array.from(nav.querySelectorAll('a'));
+        const relink = (text, path) => {
+          const a = links.find(x => x.textContent.trim() === text);
+          if (a) a.href = `/${encodeURIComponent(categoryName)}/${path}`;
+        };
+        relink('Vote', 'vote');
+        relink('Upload', 'upload');
+        relink('Leaderboard', 'leaderboard');
       }
-    } catch (error) {
-      csvUploadStatus.innerHTML = `<p style="color: red;">Error: ${error.message}</p>`;
     }
-  }
-  {% endif %}
-});
+
+    {% if is_admin or True %}
+    // Admin CSV upload functionality
+    console.log('Admin CSV upload script loaded');
+
+    const csvUploadArea = document.getElementById('csv-upload-area');
+    const csvFileInput = document.getElementById('csv-file-input');
+    const csvUploadStatus = document.getElementById('csv-upload-status');
+
+    console.log('csvUploadArea:', csvUploadArea);
+    console.log('csvFileInput:', csvFileInput);
+    console.log('csvUploadStatus:', csvUploadStatus);
+
+    if (csvUploadArea) {
+      csvUploadArea.addEventListener('click', () => {
+        console.log('CSV upload area clicked');
+        csvFileInput.click();
+      });
+    } else {
+      console.error('csvUploadArea not found');
+    }
+
+    // Test button for debugging
+    const testBtn = document.getElementById('test-upload-btn');
+    if (testBtn) {
+      testBtn.addEventListener('click', () => {
+        console.log('Test button clicked');
+        csvFileInput.click();
+      });
+    } else {
+      console.error('testBtn not found');
+    }
+
+    csvUploadArea.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      csvUploadArea.style.borderColor = '#007bff';
+    });
+
+    csvUploadArea.addEventListener('dragleave', () => {
+      csvUploadArea.style.borderColor = '#e0e0e0';
+    });
+
+    csvUploadArea.addEventListener('drop', (e) => {
+      e.preventDefault();
+      csvUploadArea.style.borderColor = '#e0e0e0';
+      const files = e.dataTransfer.files;
+      if (files.length > 0 && files[0].name.endsWith('.csv')) {
+        uploadCSV(files[0]);
+      } else {
+        csvUploadStatus.innerHTML = '<p style="color: red;">Please upload a CSV file.</p>';
+      }
+    });
+
+    csvFileInput.addEventListener('change', (e) => {
+      if (e.target.files.length > 0) {
+        uploadCSV(e.target.files[0]);
+      }
+    });
+
+    async function uploadCSV(file) {
+      console.log('uploadCSV called with file:', file);
+      csvUploadStatus.innerHTML = '<p>Uploading and processing CSV...</p>';
+
+      const formData = new FormData();
+      formData.append('file', file);
+
+      try {
+        const token = localStorage.getItem('token');
+        console.log('Token from localStorage:', token);
+        const response = await fetch('/api/photos/upload/admin/batch', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`
+          },
+          body: formData
+        });
+
+        if (response.ok) {
+          const result = await response.json();
+          csvUploadStatus.innerHTML = `<p style="color: green;">Successfully uploaded ${result.length} photos!</p>`;
+        } else {
+          const error = await response.json();
+          csvUploadStatus.innerHTML = `<p style="color: red;">Error: ${error.detail}</p>`;
+        }
+      } catch (error) {
+        csvUploadStatus.innerHTML = `<p style="color: red;">Error: ${error.message}</p>`;
+      }
+    }
+    {% endif %}
+  });
 </script>
 {% endblock %}
