@@ -101,6 +101,8 @@ class VoteOut(BaseModel):
 
 class PhotoPair(BaseModel):
     photos: List[PhotoOut]
+    progress: Optional[str] = None
+    progress_percentage: Optional[float] = None
 
 
 class LeaderboardEntry(BaseModel):

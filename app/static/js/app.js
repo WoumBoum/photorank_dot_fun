@@ -96,7 +96,7 @@ class PhotoRankApp {
             this.ws.onmessage = (event) => {
                 const data = JSON.parse(event.data);
                 if (data.type === 'new_pair') {
-                    this.displayNewPair(data.photos);
+                    this.displayNewPair(data);
                 }
             };
 
@@ -233,7 +233,7 @@ class PhotoRankApp {
             }
             
             const data = await response.json();
-            this.displayNewPair(data.photos);
+            this.displayNewPair(data);
         } catch (error) {
             if (error.message !== 'Authentication required') {
                 console.error('Error loading photos:', error);
@@ -258,10 +258,10 @@ class PhotoRankApp {
         if (container2) container2.style.display = 'block';
     }
 
-    displayNewPair(photos) {
-        if (!photos || photos.length !== 2) return;
+    displayNewPair(data) {
+        if (!data || !data.photos || data.photos.length !== 2) return;
         
-        this.currentPair = photos;
+        this.currentPair = data.photos;
         
         const img1 = document.getElementById('img1');
         const img2 = document.getElementById('img2');
@@ -283,14 +283,52 @@ class PhotoRankApp {
             img1.style.opacity = '0';
             img2.style.opacity = '0';
             
-            img1.src = `/api/photos/${photos[0].filename}`;
-            img2.src = `/api/photos/${photos[1].filename}`;
+            img1.src = `/api/photos/${data.photos[0].filename}`;
+            img2.src = `/api/photos/${data.photos[1].filename}`;
             
             // Add fade effect
             setTimeout(() => {
                 img1.style.opacity = '1';
                 img2.style.opacity = '1';
             }, 50);
+            
+            // Update progress display if available
+            this.updateProgressDisplay(data.progress, data.progress_percentage);
+        }
+    }
+    
+    updateProgressDisplay(progressText, progressPercentage) {
+        // Find or create progress container
+        let progressContainer = document.getElementById('voting-progress');
+        if (!progressContainer) {
+            progressContainer = document.createElement('div');
+            progressContainer.id = 'voting-progress';
+            progressContainer.className = 'voting-progress';
+            progressContainer.style.cssText = `
+                text-align: center;
+                margin: 1rem 0;
+                font-family: 'Courier New', monospace;
+                font-size: 0.9rem;
+                color: #666;
+            `;
+            
+            // Insert after the vote question
+            const voteQuestion = document.getElementById('vote-question');
+            if (voteQuestion && voteQuestion.parentNode) {
+                voteQuestion.parentNode.insertBefore(progressContainer, voteQuestion.nextSibling);
+            }
+        }
+        
+        if (progressText && progressPercentage !== undefined) {
+            progressContainer.innerHTML = `
+                <div style="margin-bottom: 0.5rem;">Progress: ${progressText} pairs voted</div>
+                <div style="width: 100%; background: #e0e0e0; border-radius: 4px; overflow: hidden;">
+                    <div style="width: ${progressPercentage}%; background: #000; height: 6px; transition: width 0.3s ease;"></div>
+                </div>
+                <div style="margin-top: 0.25rem; font-size: 0.8rem;">${progressPercentage.toFixed(1)}% complete</div>
+            `;
+        } else {
+            progressContainer.innerHTML = '';
         }
     }
 

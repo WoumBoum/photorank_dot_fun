@@ -138,7 +138,13 @@ def get_photo_pair_session(
     if len(all_photos) < 2:
         raise HTTPException(status_code=404, detail="Not enough photos in selected category")
     
+    # Calculate total possible pairs (n choose 2)
+    total_possible_pairs = len(all_photos) * (len(all_photos) - 1) // 2
+    
     # For authenticated users, exclude already voted pairs
+    voted_pairs_count = 0
+    progress_percentage = 0.0
+    
     if current_user:
         # Get all votes by this user in this category
         user_votes = db.query(Vote).join(Photo, (Vote.winner_id == Photo.id) | (Vote.loser_id == Photo.id))\
@@ -172,6 +178,10 @@ def get_photo_pair_session(
         selected_pair = random.choice(available_pairs)
         photos = [db.query(Photo).filter(Photo.id == selected_pair[0]).first(),
                  db.query(Photo).filter(Photo.id == selected_pair[1]).first()]
+        
+        # Calculate progress
+        voted_pairs_count = len(voted_pairs)
+        progress_percentage = (voted_pairs_count / total_possible_pairs) * 100 if total_possible_pairs > 0 else 0
     else:
         # For unauthenticated users, just return random pairs
         import random
@@ -196,7 +206,15 @@ def get_photo_pair_session(
         )
         result.append(photo_out)
     
-    return PhotoPair(photos=result)
+    # Add progress info for authenticated users
+    if current_user:
+        return PhotoPair(
+            photos=result,
+            progress=f"{voted_pairs_count}/{total_possible_pairs}",
+            progress_percentage=progress_percentage
+        )
+    else:
+        return PhotoPair(photos=result)
 
 
 @router.get("/leaderboard", response_model=List[LeaderboardEntry])
