@@ -7,8 +7,8 @@
         <nav>
             <a href="/">Vote</a>
             <a href="/upload">Upload</a>
-            <a href="/stats">Stats</a>
             <a href="/categories">Categories</a>
+            <a href="/stats">Stats</a>
             <a href="/login" id="auth-link">Login</a>
             <button class="theme-toggle" id="theme-toggle" title="Toggle dark mode">◐</button>
         </nav>
@@ -220,7 +220,7 @@
                     const target = document.body; // include top logo and everything
                     if (!target || typeof domtoimage === 'undefined') return;
                     // Ensure all imgs use CORS-friendly mode (logo + grid images)
-                    document.querySelectorAll('img').forEach(img => { try { img.crossOrigin = 'anonymous'; } catch(_){} });
+                    document.querySelectorAll('img').forEach(img => { try { img.crossOrigin = 'anonymous'; } catch (_) { } });
                     // Force top logo to inline data URL to avoid CORS/picture quirks
                     try {
                         const logoImg = document.getElementById('logo-img');
@@ -228,8 +228,8 @@
                         if (logoImg && logoPicture) {
                             // Determine current theme
                             const theme = document.documentElement.getAttribute('data-theme') ||
-                                        (localStorage.getItem('theme')) ||
-                                        (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+                                (localStorage.getItem('theme')) ||
+                                (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
                             const dark = theme === 'dark';
                             const logoPath = dark ? '/static/top_logo_photorank_dark_mode.png' : '/static/top_logo_photorank_light_mode.png';
 
@@ -256,13 +256,13 @@
 
                                 // Ensure image is loaded
                                 if (newImg.decode) {
-                                    try { await newImg.decode(); } catch(_) {}
+                                    try { await newImg.decode(); } catch (_) { }
                                 }
                                 await new Promise(r => requestAnimationFrame(r));
                                 await new Promise(r => setTimeout(r, 100)); // Extra time for rendering
                             }
                         }
-                    } catch(e) { console.error('Logo preparation failed:', e); }
+                    } catch (e) { console.error('Logo preparation failed:', e); }
                     const bg = getComputedStyle(document.body).backgroundColor || '#ffffff';
                     const dataUrl = await domtoimage.toPng(target, {
                         cacheBust: true,
