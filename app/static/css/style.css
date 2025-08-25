@@ -11,6 +11,9 @@
     --button-text: #fff;
     --button-hover-bg: #fff;
     --button-hover-text: #000;
+    --progress-bg: #e0e0e0;
+    --progress-fill: #000;
+    --progress-text: #666;
 }
 
 [data-theme="dark"] {
@@ -24,6 +27,9 @@
     --button-text: #000;
     --button-hover-bg: #000;
     --button-hover-text: #fafafa;
+    --progress-bg: #333;
+    --progress-fill: #fafafa;
+    --progress-text: #999;
 }
 
 * {
@@ -506,6 +512,33 @@ nav {
     nav {
         flex-wrap: wrap;
     }
+}
+
+/* Progress Bar */
+.progress-container {
+    margin: 2rem auto;
+    max-width: 600px;
+    text-align: center;
+}
+
+.progress-text {
+    font-size: 0.9rem;
+    color: var(--progress-text);
+    margin-bottom: 0.5rem;
+}
+
+.progress-bar {
+    width: 100%;
+    height: 6px;
+    background-color: var(--progress-bg);
+    border-radius: 3px;
+    overflow: hidden;
+}
+
+.progress-fill {
+    height: 100%;
+    background-color: var(--progress-fill);
+    transition: width 0.3s ease;
 }
 
 /* No More Choices Message */

@@ -303,14 +303,7 @@ class PhotoRankApp {
         if (!progressContainer) {
             progressContainer = document.createElement('div');
             progressContainer.id = 'voting-progress';
-            progressContainer.className = 'voting-progress';
-            progressContainer.style.cssText = `
-                text-align: center;
-                margin: 1rem 0;
-                font-family: 'Courier New', monospace;
-                font-size: 0.9rem;
-                color: #666;
-            `;
+            progressContainer.className = 'progress-container';
             
             // Insert after the vote question
             const voteQuestion = document.getElementById('vote-question');
@@ -321,11 +314,11 @@ class PhotoRankApp {
         
         if (progressText && progressPercentage !== undefined) {
             progressContainer.innerHTML = `
-                <div style="margin-bottom: 0.5rem;">Progress: ${progressText} pairs voted</div>
-                <div style="width: 100%; background: #e0e0e0; border-radius: 4px; overflow: hidden;">
-                    <div style="width: ${progressPercentage}%; background: #000; height: 6px; transition: width 0.3s ease;"></div>
+                <div class="progress-text">Progress: ${progressText} pairs voted</div>
+                <div class="progress-bar">
+                    <div class="progress-fill" style="width: ${progressPercentage}%;"></div>
                 </div>
-                <div style="margin-top: 0.25rem; font-size: 0.8rem;">${progressPercentage.toFixed(1)}% complete</div>
+                <div class="progress-text" style="margin-top: 0.25rem; font-size: 0.8rem;">${progressPercentage.toFixed(1)}% complete</div>
             `;
         } else {
             progressContainer.innerHTML = '';
