@@ -1,6 +1,7 @@
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi import FastAPI, Request
+from fastapi.middleware.cors import CORSMiddleware
 from starlette.middleware.sessions import SessionMiddleware
 from starlette.middleware.trustedhost import TrustedHostMiddleware
 
@@ -51,7 +52,6 @@ app.add_api_websocket_route("/ws", websocket_endpoint)
 # Frontend routes
 from fastapi.responses import HTMLResponse, RedirectResponse, PlainTextResponse
 from fastapi.templating import Jinja2Templates
-from fastapi import Request
 
 templates = Jinja2Templates(directory="app/templates")
 

@@ -541,6 +541,14 @@ nav {
     transition: width 0.3s ease;
 }
 
+/* Important Match UI */
+.important-match-ui {
+    text-align: center;
+    margin: 1rem 0;
+    font-family: 'Courier New', monospace;
+    color: var(--text-color);
+}
+
 /* No More Choices Message */
 .no-choices-message {
     text-align: center;
