@@ -294,52 +294,57 @@ class PhotoRankApp {
             
             // Update progress display if available
             this.updateProgressDisplay(
-                data.progress,
+                data.progress, 
                 data.progress_percentage,
-                data.next_milestone,
-                data.match_importance,
-                data.photo_ranks
+                data.next_top5_pairs,
+                data.next_top10_pairs
             );
+            
+            // Show important match UI if applicable
+            if (data.is_top_match) {
+                this.showImportantMatchUI(data.is_top_match);
+            } else {
+                this.hideImportantMatchUI();
+            }
         }
     }
     
-    updateProgressDisplay(progressText, progressPercentage, nextMilestone, matchImportance, photoRanks) {
+    updateProgressDisplay(progressText, progressPercentage, nextTop5Pairs, nextTop10Pairs) {
         // Find or create progress container
         let progressContainer = document.getElementById('voting-progress');
         if (!progressContainer) {
             progressContainer = document.createElement('div');
             progressContainer.id = 'voting-progress';
             progressContainer.className = 'progress-container';
-
+            
             // Insert after the vote question
             const voteQuestion = document.getElementById('vote-question');
             if (voteQuestion && voteQuestion.parentNode) {
                 voteQuestion.parentNode.insertBefore(progressContainer, voteQuestion.nextSibling);
             }
         }
-
-        // Build progress text with milestone anticipation
-        let displayText = `Progress: ${progressText} pairs voted`;
-        if (nextMilestone) {
-            const untilTop5 = nextMilestone.pairs_until_top5;
-            const untilTop10 = nextMilestone.pairs_until_top10;
-
-            if (untilTop5 && untilTop5 > 0) {
-                displayText += ` • NEXT TOP 5 IN ${untilTop5} PAIRS`;
-            }
-            if (untilTop10 && untilTop10 > 0 && (!untilTop5 || untilTop10 < untilTop5)) {
-                displayText += ` • NEXT TOP 10 IN ${untilTop10} PAIRS`;
-            }
-        }
-
-        // Add current match importance
-        if (matchImportance) {
-            displayText += ` • ${matchImportance} MATCH!`;
-        }
-
+        
         if (progressText && progressPercentage !== undefined) {
+            // Build anticipation text
+            let anticipationText = '';
+            if (nextTop5Pairs !== null && nextTop5Pairs !== undefined) {
+                if (nextTop5Pairs === 0) {
+                    anticipationText = 'TOP 5 MATCH! • ';
+                } else if (nextTop5Pairs <= 5) {
+                    anticipationText = `TOP 5 IN ${nextTop5Pairs} • `;
+                }
+            }
+            
+            if (nextTop10Pairs !== null && nextTop10Pairs !== undefined && anticipationText === '') {
+                if (nextTop10Pairs === 0) {
+                    anticipationText = 'TOP 10 MATCH! • ';
+                } else if (nextTop10Pairs <= 3) {
+                    anticipationText = `TOP 10 IN ${nextTop10Pairs} • `;
+                }
+            }
+            
             progressContainer.innerHTML = `
-                <div class="progress-text">${displayText}</div>
+                <div class="progress-text">${anticipationText}Progress: ${progressText} pairs</div>
                 <div class="progress-bar">
                     <div class="progress-fill" style="width: ${progressPercentage}%;"></div>
                 </div>
@@ -348,48 +353,42 @@ class PhotoRankApp {
         } else {
             progressContainer.innerHTML = '';
         }
-
-        // Handle important match UI
-        this.updateImportantMatchUI(matchImportance, photoRanks);
     }
 
-    updateImportantMatchUI(matchImportance, photoRanks) {
-        // Remove existing important match UI
-        const existingUI = document.querySelector('.important-match-ui');
-        if (existingUI) {
-            existingUI.remove();
+    showImportantMatchUI(matchType) {
+        // Remove any existing important match UI
+        this.hideImportantMatchUI();
+        
+        // Create important match banner
+        const banner = document.createElement('div');
+        banner.id = 'important-match-banner';
+        banner.className = 'important-match-banner';
+        
+        // Brutalist styling - text only, no graphics
+        banner.style.cssText = `
+            text-align: center;
+            font-family: 'Courier New', monospace;
+            font-weight: bold;
+            font-size: 1.1rem;
+            margin: 1rem 0;
+            padding: 0.5rem;
+            border: 1px solid #000;
+            background: #f8f8f8;
+        `;
+        
+        banner.textContent = matchType === 'TOP_5' ? 'TOP 5 MATCHUP' : 'TOP 10 MATCHUP';
+        
+        // Insert before the photo pair
+        const photoPair = document.querySelector('.photo-pair');
+        if (photoPair && photoPair.parentNode) {
+            photoPair.parentNode.insertBefore(banner, photoPair);
         }
+    }
 
-        if (matchImportance && photoRanks && photoRanks.length === 2) {
-            // Create important match indicator
-            const matchUI = document.createElement('div');
-            matchUI.className = 'important-match-ui';
-
-            if (matchImportance === 'TOP_5') {
-                matchUI.innerHTML = `
-                    <div style="text-align: center; margin: 1rem 0; font-weight: bold; font-size: 1.1rem;">
-                        ${matchImportance} MATCHUP
-                    </div>
-                    <div style="text-align: center; margin-bottom: 1rem; color: var(--secondary-text);">
-                        Rank #${photoRanks[0]} vs Rank #${photoRanks[1]}
-                    </div>
-                `;
-            } else if (matchImportance === 'TOP_10') {
-                matchUI.innerHTML = `
-                    <div style="text-align: center; margin: 1rem 0; font-weight: bold;">
-                        ${matchImportance} MATCHUP
-                    </div>
-                    <div style="text-align: center; margin-bottom: 1rem; color: var(--secondary-text);">
-                        Rank #${photoRanks[0]} vs Rank #${photoRanks[1]}
-                    </div>
-                `;
-            }
-
-            // Insert before the photo pair
-            const photoPair = document.querySelector('.photo-pair');
-            if (photoPair && photoPair.parentNode) {
-                photoPair.parentNode.insertBefore(matchUI, photoPair);
-            }
+    hideImportantMatchUI() {
+        const banner = document.getElementById('important-match-banner');
+        if (banner) {
+            banner.remove();
         }
     }
 

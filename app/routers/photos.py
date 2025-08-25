@@ -27,9 +27,9 @@ from ..config import settings
 security = HTTPBearer(auto_error=False)
 
 def get_current_user_optional(
-    credentials: HTTPAuthorizationCredentials = Depends(security),
-    db: Session = Depends(get_db)
-) -> Optional[User]:
+    credentials = Depends(security),
+    db = Depends(get_db)
+):
     """Get current user if authenticated, otherwise return None"""
     if credentials is None:
         return None
@@ -37,7 +37,7 @@ def get_current_user_optional(
     token = credentials.credentials
     try:
         payload = jwt.decode(token, settings.secret_key, algorithms=[settings.algorithm])
-        user_id: int = payload.get("user_id")
+        user_id = payload.get("user_id")
         if user_id is None:
             return None
     except JWTError:
@@ -47,7 +47,7 @@ def get_current_user_optional(
     return user
 
 
-def is_admin_user(user: User) -> bool:
+def is_admin_user(user):
     """Check if the current user is an admin based on environment variables"""
     mod_provider = os.getenv("MODERATOR_PROVIDER")
     mod_provider_id = os.getenv("MODERATOR_PROVIDER_ID")
@@ -179,9 +179,25 @@ def get_photo_pair_session(
         photos = [db.query(Photo).filter(Photo.id == selected_pair[0]).first(),
                  db.query(Photo).filter(Photo.id == selected_pair[1]).first()]
         
-        # Calculate progress
-        voted_pairs_count = len(voted_pairs)
-        progress_percentage = (voted_pairs_count / total_possible_pairs) * 100 if total_possible_pairs > 0 else 0
+    # Calculate progress
+    voted_pairs_count = len(voted_pairs)
+    progress_percentage = (voted_pairs_count / total_possible_pairs) * 100 if total_possible_pairs > 0 else 0
+    
+    # Calculate excitement anticipation milestones
+    next_top5_pairs = None
+    next_top10_pairs = None
+    
+    if total_possible_pairs > 0 and voted_pairs_count is not None:
+        # Calculate intervals for evenly spaced excitement
+        top5_interval = max(1, total_possible_pairs // 10)  # Every 10% of total pairs
+        top10_interval = max(1, total_possible_pairs // 45)  # Every ~2.22% of total pairs
+        
+        # Calculate next milestone pairs
+        next_top5 = ((voted_pairs_count // top5_interval) + 1) * top5_interval
+        next_top10 = ((voted_pairs_count // top10_interval) + 1) * top10_interval
+        
+        next_top5_pairs = next_top5 - voted_pairs_count
+        next_top10_pairs = next_top10 - voted_pairs_count
     else:
         # For unauthenticated users, just return random pairs
         import random
@@ -206,69 +222,33 @@ def get_photo_pair_session(
         )
         result.append(photo_out)
     
-    # Calculate evenly spaced excitement milestones
-    def get_next_excitement_milestone(voted_count, total_pairs):
-        if total_pairs < 10:
-            return {"next_top5": None, "next_top10": None, "pairs_until_top5": None, "pairs_until_top10": None}
-
-        top5_interval = max(1, total_pairs // 10)  # Every 10% for top 5 matches
-        top10_interval = max(1, total_pairs // 45)  # Every ~2.22% for top 10 matches
-
-        next_top5 = ((voted_count // top5_interval) + 1) * top5_interval
-        next_top10 = ((voted_count // top10_interval) + 1) * top10_interval
-
-        return {
-            "next_top5": next_top5,
-            "next_top10": next_top10,
-            "pairs_until_top5": next_top5 - voted_count,
-            "pairs_until_top10": next_top10 - voted_count
-        }
-
-    # Check if this is an important match (both photos in top 5 or top 10)
-    def is_important_match(photo1, photo2, all_photos):
-        if len(all_photos) < 2:
-            return None
-
-        # Get current rankings by ELO
-        ranked_photos = sorted(all_photos, key=lambda x: x.elo_rating, reverse=True)
-
-        try:
-            photo1_rank = ranked_photos.index(photo1) + 1
-            photo2_rank = ranked_photos.index(photo2) + 1
-
+    # Detect if this is an important match (Top 5 or Top 10)
+    is_top_match = None
+    if current_user and photos and len(photos) == 2:
+        # Get current rankings for all photos in category
+        ranked_photos = db.query(Photo).filter(
+            Photo.category_id == selected_category_id
+        ).order_by(Photo.elo_rating.desc()).all()
+        
+        # Find ranks of the current photos
+        photo1_rank = next((i+1 for i, p in enumerate(ranked_photos) if p.id == photos[0].id), None)
+        photo2_rank = next((i+1 for i, p in enumerate(ranked_photos) if p.id == photos[1].id), None)
+        
+        if photo1_rank and photo2_rank:
             if photo1_rank <= 5 and photo2_rank <= 5:
-                return "TOP_5"
+                is_top_match = "TOP_5"
             elif photo1_rank <= 10 and photo2_rank <= 10:
-                return "TOP_10"
-        except ValueError:
-            pass
-
-        return None
-
-    # Get photo rank helper function
-    def get_photo_rank(photo_id, all_photos):
-        if len(all_photos) < 2:
-            return None
-
-        ranked_photos = sorted(all_photos, key=lambda x: x.elo_rating, reverse=True)
-        for rank, photo in enumerate(ranked_photos, 1):
-            if photo.id == photo_id:
-                return rank
-        return None
-
-    # Get milestone info
-    milestones = get_next_excitement_milestone(voted_pairs_count, total_possible_pairs)
-    match_importance = is_important_match(photos[0], photos[1], all_photos) if len(photos) == 2 else None
-
+                is_top_match = "TOP_10"
+    
     # Add progress info for authenticated users
     if current_user:
         return PhotoPair(
             photos=result,
             progress=f"{voted_pairs_count}/{total_possible_pairs}",
             progress_percentage=progress_percentage,
-            next_milestone=milestones,
-            match_importance=match_importance,
-            photo_ranks=[get_photo_rank(p.id, all_photos) for p in photos] if match_importance else None
+            next_top5_pairs=next_top5_pairs,
+            next_top10_pairs=next_top10_pairs,
+            is_top_match=is_top_match
         )
     else:
         return PhotoPair(photos=result)

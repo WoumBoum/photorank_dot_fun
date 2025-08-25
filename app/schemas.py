@@ -103,9 +103,9 @@ class PhotoPair(BaseModel):
     photos: List[PhotoOut]
     progress: Optional[str] = None
     progress_percentage: Optional[float] = None
-    next_milestone: Optional[dict] = None
-    match_importance: Optional[str] = None
-    photo_ranks: Optional[List[int]] = None
+    next_top5_pairs: Optional[int] = None
+    next_top10_pairs: Optional[int] = None
+    is_top_match: Optional[str] = None
 
 
 class LeaderboardEntry(BaseModel):
