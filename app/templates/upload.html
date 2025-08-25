@@ -36,7 +36,7 @@
   <div class="upload-section" id="admin-upload-section" style="margin-top: 2rem; border-top: 1px solid #e0e0e0; padding-top: 2rem; display: none;">
     <h2>Advanced Upload (Admin Only)</h2>
     <p style="font-size: 0.9em; color: #666; margin-bottom: 1rem;">
-      Upload multiple photos with custom ELO ratings using a CSV file.
+      Upload multiple photos with custom ELO ratings and user assignments using a CSV file.
     </p>
     <div class="csv-upload-area" id="csv-upload-area"
       style="border: 2px dashed #e0e0e0; padding: 2rem; text-align: center; border-radius: 4px; margin-bottom: 1rem; cursor: pointer;">
@@ -47,9 +47,9 @@
     <div class="csv-format-info" style="background: #f9f9f9; padding: 1rem; border-radius: 4px; margin-bottom: 1rem;">
       <h3 style="margin-top: 0; font-size: 1em;">CSV Format:</h3>
       <p style="font-family: monospace; font-size: 0.9em; margin: 0.5rem 0;">
-        image_url,elo<br>
-        https://example.com/image1.jpg,1500<br>
-        https://example.com/image2.jpg,1200
+        image_url,elo,user_id<br>
+        https://example.com/image1.jpg,1500,1<br>
+        https://example.com/image2.jpg,1200,2
       </p>
       <p style="font-size: 0.8em; color: #666; margin-top: 0.5rem;">
         ELO ratings must be between 0 and 4000.

@@ -662,11 +662,11 @@ async def upload_photos_admin_batch(
     csv_reader = csv.DictReader(io.StringIO(content_str))
 
     # Validate CSV headers
-    required_headers = {'image_url', 'elo'}
+    required_headers = {'image_url', 'elo', 'user_id'}
     if not required_headers.issubset(set(csv_reader.fieldnames or [])):
         raise HTTPException(
             status_code=400,
-            detail="CSV must contain 'image_url' and 'elo' columns"
+            detail="CSV must contain 'image_url', 'elo', and 'user_id' columns"
         )
 
     # Parse and validate rows
@@ -674,6 +674,7 @@ async def upload_photos_admin_batch(
     for row_num, row in enumerate(csv_reader, start=2):  # Start at 2 to account for header
         image_url = row.get('image_url', '').strip()
         elo_str = row.get('elo', '').strip()
+        user_id_str = row.get('user_id', '').strip()
 
         if not image_url:
             raise HTTPException(
@@ -691,7 +692,17 @@ async def upload_photos_admin_batch(
                 detail=f"Row {row_num}: Invalid ELO rating '{elo_str}'"
             )
 
-        photos_to_create.append({'image_url': image_url, 'elo': elo})
+        try:
+            user_id = int(user_id_str)
+            if user_id <= 0:
+                raise ValueError("User ID must be positive")
+        except ValueError:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Row {row_num}: Invalid user ID '{user_id_str}'"
+            )
+
+        photos_to_create.append({'image_url': image_url, 'elo': elo, 'user_id': user_id})
 
     if not photos_to_create:
         raise HTTPException(status_code=400, detail="No valid photos found in CSV")
@@ -735,10 +746,10 @@ async def upload_photos_admin_batch(
                 ContentType=content_type
             )
 
-            # Create photo record with custom ELO
+            # Create photo record with custom ELO and specified user
             photo = Photo(
                 filename=filename,
-                owner_id=current_user.id,
+                owner_id=photo_data['user_id'],
                 category_id=selected_category_id,
                 elo_rating=photo_data['elo']
             )
