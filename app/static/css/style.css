@@ -539,6 +539,58 @@ nav {
     height: 100%;
     background-color: var(--progress-fill);
     transition: width 0.3s ease;
+    position: relative;
+}
+
+/* Progress Bar Ticks */
+.progress-bar {
+    position: relative;
+}
+
+.progress-tick {
+    position: absolute;
+    top: -4px;
+    width: 2px;
+    height: 14px;
+    background-color: var(--text-color);
+    opacity: 0.3;
+    z-index: 1;
+}
+
+.progress-tick.top-5 {
+    background-color: var(--progress-fill);
+    opacity: 0.8;
+    height: 18px;
+    top: -6px;
+}
+
+.progress-tick.top-10 {
+    background-color: var(--progress-fill);
+    opacity: 0.6;
+    height: 16px;
+    top: -5px;
+}
+
+.progress-tick-label {
+    position: absolute;
+    top: -20px;
+    font-size: 0.7rem;
+    color: var(--progress-text);
+    transform: translateX(-50%);
+    white-space: nowrap;
+}
+
+/* Important Match Banner */
+.important-match-banner {
+    text-align: center;
+    font-family: 'Courier New', monospace;
+    font-weight: bold;
+    font-size: 1.1rem;
+    margin: 1rem 0;
+    padding: 0.5rem;
+    border: 1px solid var(--text-color);
+    background: var(--hover-color);
+    color: var(--text-color);
 }
 
 /* No More Choices Message */

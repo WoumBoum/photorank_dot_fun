@@ -343,15 +343,55 @@ class PhotoRankApp {
                 }
             }
             
-            progressContainer.innerHTML = `
+            // Create progress bar with ticks
+            let progressBarHTML = `
                 <div class="progress-text">${anticipationText}Progress: ${progressText} pairs</div>
                 <div class="progress-bar">
                     <div class="progress-fill" style="width: ${progressPercentage}%;"></div>
+                    <!-- Ticks will be added here -->
                 </div>
                 <div class="progress-text" style="margin-top: 0.25rem; font-size: 0.8rem;">${progressPercentage.toFixed(1)}% complete</div>
             `;
+            
+            progressContainer.innerHTML = progressBarHTML;
+            
+            // Add ticks to progress bar (simplified - in real implementation, we'd need total pairs count)
+            // For now, we'll add ticks at fixed intervals that match the backend logic
+            this.addProgressBarTicks(progressContainer, progressPercentage);
         } else {
             progressContainer.innerHTML = '';
+        }
+    }
+
+    addProgressBarTicks(progressContainer, progressPercentage) {
+        // Simplified implementation - adds ticks at fixed intervals
+        // In a real implementation, we'd need the total pairs count from the backend
+        const progressBar = progressContainer.querySelector('.progress-bar');
+        if (!progressBar) return;
+        
+        // Add ticks at 10% intervals (Top 5 milestones)
+        for (let i = 10; i <= 100; i += 10) {
+            const tick = document.createElement('div');
+            tick.className = 'progress-tick top-5';
+            tick.style.left = `${i}%`;
+            progressBar.appendChild(tick);
+            
+            // Add label for major milestones
+            if (i % 20 === 0) {
+                const label = document.createElement('div');
+                label.className = 'progress-tick-label';
+                label.style.left = `${i}%`;
+                label.textContent = `${i}%`;
+                progressBar.appendChild(label);
+            }
+        }
+        
+        // Add ticks at ~2.22% intervals (Top 10 milestones)
+        for (let i = 2.22; i < 100; i += 2.22) {
+            const tick = document.createElement('div');
+            tick.className = 'progress-tick top-10';
+            tick.style.left = `${i.toFixed(1)}%`;
+            progressBar.appendChild(tick);
         }
     }
 
@@ -364,17 +404,7 @@ class PhotoRankApp {
         banner.id = 'important-match-banner';
         banner.className = 'important-match-banner';
         
-        // Brutalist styling - text only, no graphics
-        banner.style.cssText = `
-            text-align: center;
-            font-family: 'Courier New', monospace;
-            font-weight: bold;
-            font-size: 1.1rem;
-            margin: 1rem 0;
-            padding: 0.5rem;
-            border: 1px solid #000;
-            background: #f8f8f8;
-        `;
+        // CSS class handles styling with dark mode support
         
         banner.textContent = matchType === 'TOP_5' ? 'TOP 5 MATCHUP' : 'TOP 10 MATCHUP';
         
