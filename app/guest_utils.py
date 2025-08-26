@@ -5,6 +5,7 @@ from typing import Optional
 
 from fastapi import Request, HTTPException
 from sqlalchemy.orm import Session
+from sqlalchemy import inspect
 
 from .models import GuestVote, GuestVoteLimit
 
@@ -34,6 +35,16 @@ def is_valid_session_id(session_id: str) -> bool:
         uuid.UUID(session_id)
         return True
     except ValueError:
+        return False
+
+
+def guest_tables_exist(db: Session) -> bool:
+    """Check if guest voting tables exist in the database"""
+    try:
+        # Try to query a simple count from guest_vote_limits
+        result = db.execute("SELECT COUNT(*) FROM guest_vote_limits LIMIT 1")
+        return True
+    except Exception:
         return False
 
 
@@ -80,8 +91,9 @@ def can_guest_vote(session_id: str, db: Session) -> bool:
         # Check vote count
         return vote_limit.vote_count < GUEST_VOTE_LIMIT
     except Exception:
-        # If guest voting tables don't exist, allow voting
-        return True
+        # If guest voting tables don't exist, don't allow voting
+        # This prevents infinite guest voting when tables are missing
+        return False
 
 
 def record_guest_vote(session_id: str, winner_id: int, loser_id: int, 
@@ -136,8 +148,8 @@ def get_remaining_guest_votes(session_id: str, db: Session) -> int:
         
         return max(0, GUEST_VOTE_LIMIT - vote_limit.vote_count)
     except Exception:
-        # If guest voting tables don't exist, return full limit
-        return GUEST_VOTE_LIMIT
+        # If guest voting tables don't exist, return 0 to indicate voting not available
+        return 0
 
 
 def migrate_guest_votes_to_user(session_id: str, user_id: int, db: Session) -> int:
