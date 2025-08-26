@@ -144,6 +144,9 @@ def get_photo_pair_session(
     # For authenticated users, exclude already voted pairs
     voted_pairs_count = 0
     progress_percentage = 0.0
+    voted_pairs = set()
+    next_top5_pairs = None
+    next_top10_pairs = None
     
     if current_user:
         # Get all votes by this user in this category
@@ -207,12 +210,14 @@ def get_photo_pair_session(
         # For unauthenticated users, just return random pairs
         import random
         photos = random.sample(all_photos, 2)
-        next_top5_pairs = None
-        next_top10_pairs = None
     
     # Calculate progress
-    voted_pairs_count = len(voted_pairs)
-    progress_percentage = (voted_pairs_count / total_possible_pairs) * 100 if total_possible_pairs > 0 else 0
+    if current_user:
+        voted_pairs_count = len(voted_pairs)
+        progress_percentage = (voted_pairs_count / total_possible_pairs) * 100 if total_possible_pairs > 0 else 0
+    else:
+        voted_pairs_count = 0
+        progress_percentage = 0.0
     
     # Add owner username and category info to each photo
     result = []

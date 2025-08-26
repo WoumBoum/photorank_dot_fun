@@ -18,7 +18,7 @@
         <h2 id="category-question">Results of:</h2>
         <div id="category-vote-count" style="margin-top:6px;color:#666;font-size:0.95em;"></div>
         <div style="text-align:center;margin:10px 0 20px 0;">
-            <button id="download-leaderboard" class="btn">Screen Top 9</button>
+            <button id="download-leaderboard" class="btn">Screen current leaderboard</button>
         </div>
         <div class="current-category">
             {% if category_name %}
@@ -217,83 +217,61 @@
             dlBtn._bound = true;
             dlBtn.addEventListener('click', async () => {
                 try {
-                    // Create a container for just the top 9 photos
-                    const leaderboardContainer = document.querySelector('.leaderboard');
-                    const photoGrid = document.getElementById('leaderboard-grid');
-                    const top9Container = document.createElement('div');
-                    top9Container.className = 'leaderboard-top9-screenshot';
-                    
-                    // Clone the header and category info
-                    const header = document.querySelector('.leaderboard header');
-                    const currentCategory = document.querySelector('.current-category');
-                    const categoryQuestion = document.getElementById('category-question');
-                    const categoryVoteCount = document.getElementById('category-vote-count');
-                    
-                    if (header) top9Container.appendChild(header.cloneNode(true));
-                    if (categoryQuestion) {
-                        const questionClone = categoryQuestion.cloneNode(true);
-                        top9Container.appendChild(questionClone);
-                    }
-                    if (categoryVoteCount) {
-                        const voteCountClone = categoryVoteCount.cloneNode(true);
-                        top9Container.appendChild(voteCountClone);
-                    }
-                    if (currentCategory) {
-                        const categoryClone = currentCategory.cloneNode(true);
-                        top9Container.appendChild(categoryClone);
-                    }
-                    
-                    // Get only the top 9 photo items
-                    const photoItems = photoGrid.querySelectorAll('.photo-item');
-                    const top9Grid = document.createElement('div');
-                    top9Grid.className = 'photo-grid';
-                    top9Grid.style.display = 'grid';
-                    top9Grid.style.gridTemplateColumns = 'repeat(3, 1fr)';
-                    top9Grid.style.gap = '1rem';
-                    top9Grid.style.margin = '1rem 0';
-                    
-                    for (let i = 0; i < Math.min(9, photoItems.length); i++) {
-                        top9Grid.appendChild(photoItems[i].cloneNode(true));
-                    }
-                    
-                    top9Container.appendChild(top9Grid);
-                    
-                    // Add screenshot timestamp
-                    const timestamp = document.createElement('div');
-                    timestamp.style.textAlign = 'center';
-                    timestamp.style.marginTop = '1rem';
-                    timestamp.style.fontSize = '0.9em';
-                    timestamp.style.color = '#666';
-                    timestamp.textContent = `Top 9 • ${new Date().toLocaleDateString()}`;
-                    top9Container.appendChild(timestamp);
-                    
-                    // Apply screenshot styling
-                    top9Container.style.padding = '2rem';
-                    top9Container.style.backgroundColor = getComputedStyle(document.body).backgroundColor || '#ffffff';
-                    top9Container.style.maxWidth = '800px';
-                    top9Container.style.margin = '0 auto';
-                    
-                    // Temporarily add to document for screenshot
-                    document.body.appendChild(top9Container);
-                    
-                    // Ensure all imgs use CORS-friendly mode
-                    top9Container.querySelectorAll('img').forEach(img => { 
-                        try { img.crossOrigin = 'anonymous'; } catch (_) { } 
-                    });
-                    
+                    const target = document.body; // include top logo and everything
+                    if (!target || typeof domtoimage === 'undefined') return;
+                    // Ensure all imgs use CORS-friendly mode (logo + grid images)
+                    document.querySelectorAll('img').forEach(img => { try { img.crossOrigin = 'anonymous'; } catch (_) { } });
+                    // Force top logo to inline data URL to avoid CORS/picture quirks
+                    try {
+                        const logoImg = document.getElementById('logo-img');
+                        const logoPicture = document.getElementById('top-logo');
+                        if (logoImg && logoPicture) {
+                            // Determine current theme
+                            const theme = document.documentElement.getAttribute('data-theme') ||
+                                (localStorage.getItem('theme')) ||
+                                (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+                            const dark = theme === 'dark';
+                            const logoPath = dark ? '/static/top_logo_photorank_dark_mode.png' : '/static/top_logo_photorank_light_mode.png';
+
+                            // Fetch and convert to data URL
+                            const resp = await fetch(logoPath, { cache: 'no-store', credentials: 'omit' });
+                            if (resp.ok) {
+                                const blob = await resp.blob();
+                                const dataUrl = await new Promise((resolve) => {
+                                    const fr = new FileReader();
+                                    fr.onload = () => resolve(fr.result);
+                                    fr.readAsDataURL(blob);
+                                });
+
+                                // Remove picture element complexity and replace with simple img
+                                const newImg = document.createElement('img');
+                                newImg.id = 'logo-img';
+                                newImg.src = dataUrl;
+                                newImg.alt = 'PhotoRank';
+                                newImg.style.cssText = logoImg.style.cssText;
+                                newImg.className = logoImg.className;
+
+                                // Replace the picture element with the simple img
+                                logoPicture.parentNode.replaceChild(newImg, logoPicture);
+
+                                // Ensure image is loaded
+                                if (newImg.decode) {
+                                    try { await newImg.decode(); } catch (_) { }
+                                }
+                                await new Promise(r => requestAnimationFrame(r));
+                                await new Promise(r => setTimeout(r, 100)); // Extra time for rendering
+                            }
+                        }
+                    } catch (e) { console.error('Logo preparation failed:', e); }
                     const bg = getComputedStyle(document.body).backgroundColor || '#ffffff';
-                    const dataUrl = await domtoimage.toPng(top9Container, {
+                    const dataUrl = await domtoimage.toPng(target, {
                         cacheBust: true,
                         bgcolor: bg,
                         imagePlaceholder: undefined
                     });
-                    
-                    // Clean up
-                    document.body.removeChild(top9Container);
-                    
                     const a = document.createElement('a');
                     const cat = (document.getElementById('cat-name-display')?.textContent || 'leaderboard').trim().replace(/\s+/g, '_');
-                    a.download = `${cat}_top9.png`;
+                    a.download = `${cat}_leaderboard.png`;
                     a.href = dataUrl;
                     document.body.appendChild(a);
                     a.click();
