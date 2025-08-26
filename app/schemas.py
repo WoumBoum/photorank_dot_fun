@@ -104,7 +104,6 @@ class PhotoPair(BaseModel):
     progress: Optional[str] = None
     progress_percentage: Optional[float] = None
     next_top5_pairs: Optional[int] = None
-    next_top10_pairs: Optional[int] = None
     is_top_match: Optional[str] = None
 
 

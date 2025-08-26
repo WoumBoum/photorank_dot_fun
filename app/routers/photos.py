@@ -146,7 +146,6 @@ def get_photo_pair_session(
     progress_percentage = 0.0
     voted_pairs = set()
     next_top5_pairs = None
-    next_top10_pairs = None
     
     if current_user:
         # Get all votes by this user in this category
@@ -253,8 +252,6 @@ def get_photo_pair_session(
         if photo1_rank and photo2_rank:
             if photo1_rank <= 5 and photo2_rank <= 5:
                 is_top_match = "TOP_5"
-            elif photo1_rank <= 10 and photo2_rank <= 10:
-                is_top_match = "TOP_10"
     
     # Add progress info for authenticated users
     if current_user:
@@ -263,7 +260,6 @@ def get_photo_pair_session(
             progress=f"{voted_pairs_count}/{total_possible_pairs}",
             progress_percentage=progress_percentage,
             next_top5_pairs=next_top5_pairs,
-            next_top10_pairs=next_top10_pairs,
             is_top_match=is_top_match
         )
     else:

@@ -167,7 +167,23 @@ def authorized_client(client, token):
 
 
 @pytest.fixture
-def test_photos(session, test_user, test_user2):
+def test_category(session):
+    """Create a test category"""
+    category_data = {
+        "name": "test-category",
+        "description": "Test category for testing",
+        "question": "Which test photo is better?"
+    }
+    
+    category = models.Category(**category_data)
+    session.add(category)
+    session.commit()
+    session.refresh(category)
+    
+    return category
+
+@pytest.fixture
+def test_photos(session, test_user, test_user2, test_category):
     """Create test photos"""
     photos_data = [
         {
@@ -175,28 +191,32 @@ def test_photos(session, test_user, test_user2):
             "elo_rating": 1200.0,
             "total_duels": 0,
             "wins": 0,
-            "owner_id": test_user.id
+            "owner_id": test_user.id,
+            "category_id": test_category.id
         },
         {
             "filename": "photo2.jpg",
             "elo_rating": 1250.0,
             "total_duels": 10,
             "wins": 7,
-            "owner_id": test_user.id
+            "owner_id": test_user.id,
+            "category_id": test_category.id
         },
         {
             "filename": "photo3.jpg",
             "elo_rating": 1150.0,
             "total_duels": 5,
             "wins": 2,
-            "owner_id": test_user2.id
+            "owner_id": test_user2.id,
+            "category_id": test_category.id
         },
         {
             "filename": "photo4.jpg",
             "elo_rating": 1300.0,
             "total_duels": 60,
             "wins": 45,
-            "owner_id": test_user2.id
+            "owner_id": test_user2.id,
+            "category_id": test_category.id
         }
     ]
     

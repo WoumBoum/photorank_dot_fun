@@ -297,7 +297,6 @@ class PhotoRankApp {
                 data.progress, 
                 data.progress_percentage,
                 data.next_top5_pairs,
-                data.next_top10_pairs,
                 data.is_top_match
             );
             
@@ -310,7 +309,7 @@ class PhotoRankApp {
         }
     }
     
-    updateProgressDisplay(progressText, progressPercentage, nextTop5Pairs, nextTop10Pairs, isTopMatch) {
+    updateProgressDisplay(progressText, progressPercentage, nextTop5Pairs, isTopMatch) {
         // Find or create progress container
         let progressContainer = document.getElementById('voting-progress');
         if (!progressContainer) {
@@ -391,7 +390,7 @@ class PhotoRankApp {
         
         // CSS class handles styling with dark mode support
         
-        banner.textContent = matchType === 'TOP_5' ? 'TOP 5 MATCHUP' : 'TOP 10 MATCHUP';
+        banner.textContent = 'TOP 5 MATCHUP';
         
         // Insert before the photo pair
         const photoPair = document.querySelector('.photo-pair');

@@ -63,7 +63,7 @@ class TestAuthentication:
         
         # Create token with negative expiration
         payload = {"user_id": 1, "exp": datetime.utcnow() - timedelta(hours=1)}
-        import jwt
+        from jose import jwt
         expired_token = jwt.encode(payload, "test_secret", algorithm="HS256")
         
         with pytest.raises(HTTPException):
