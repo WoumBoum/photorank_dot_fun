@@ -117,21 +117,26 @@ def create_guest_vote(
     db: Session = Depends(get_db)
 ):
     """Submit a vote as a guest user"""
+    print(f"[GUEST_VOTE] Starting guest vote: winner_id={vote.winner_id}, loser_id={vote.loser_id}")
     try:
         # Check if photos exist
+        print(f"[GUEST_VOTE] Checking if photos exist...")
         winner = db.query(Photo).filter(Photo.id == vote.winner_id).first()
         loser = db.query(Photo).filter(Photo.id == vote.loser_id).first()
-        
+
         if not winner or not loser:
+            print(f"[GUEST_VOTE] Photo not found: winner={winner}, loser={loser}")
             raise HTTPException(status_code=404, detail="Photo not found")
-        
+
         if winner.id == loser.id:
+            print(f"[GUEST_VOTE] Same photo error")
             raise HTTPException(status_code=400, detail="Cannot vote for same photo")
-        
+
         # Get guest session and check rate limits
         original_cookie = request.cookies.get("guest_session")
         session_id = get_guest_session_id(request)
         ip_hash, user_agent_hash = get_client_info(request)
+        print(f"[GUEST_VOTE] Session: {session_id}, cookie_present={original_cookie is not None}")
         
         # Check for expired session and cleanup if needed
         try:
@@ -159,19 +164,23 @@ def create_guest_vote(
             # Continue with the vote - this allows the system to work even if guest tables are missing
         
         # Calculate ELO changes (same logic as authenticated votes)
+        print(f"[GUEST_VOTE] Calculating ELO: winner_rating={winner.elo_rating}, loser_rating={loser.elo_rating}")
         winner_change, loser_change = calculate_elo_change(
-            winner.elo_rating, 
+            winner.elo_rating,
             loser.elo_rating
         )
-        
+        print(f"[GUEST_VOTE] ELO changes: winner_change={winner_change}, loser_change={loser_change}")
+
         # Update ratings
+        print(f"[GUEST_VOTE] Updating ratings...")
         winner.elo_rating += winner_change
         loser.elo_rating += loser_change
-        
+
         # Update duel counts
         winner.total_duels += 1
         loser.total_duels += 1
         winner.wins += 1
+        print(f"[GUEST_VOTE] Updated duel counts")
         
         # Record guest vote if tables exist
         try:
@@ -182,8 +191,16 @@ def create_guest_vote(
             # Continue even if guest vote recording fails
         
         # Commit all changes
-        db.commit()
-        
+        try:
+            db.commit()
+        except Exception as e:
+            print(f"Failed to commit guest vote changes: {e}")
+            db.rollback()
+            raise HTTPException(
+                status_code=500,
+                detail="Database error. Please try again."
+            )
+
         # Create response payload (without user_id since it's a guest vote)
         payload = VoteOut(
             id=0,
@@ -192,7 +209,7 @@ def create_guest_vote(
             loser_id=vote.loser_id,
             created_at=datetime.utcnow()
         )
-        
+
         # Build JSONResponse and set cookie if newly created
         resp = JSONResponse(content=payload.dict())
         if not original_cookie or original_cookie != session_id:
@@ -204,15 +221,18 @@ def create_guest_vote(
                 httponly=False,
                 samesite="Lax"
             )
-        
+
         return resp
     
     except HTTPException:
         # Re-raise HTTP exceptions
+        print(f"[GUEST_VOTE] HTTPException raised, re-raising")
         raise
     except Exception as e:
         # Log unexpected errors but return a proper response
-        print(f"Unexpected error in guest vote: {e}")
+        print(f"[GUEST_VOTE] Unexpected error: {type(e).__name__}: {e}")
+        import traceback
+        print(f"[GUEST_VOTE] Traceback: {traceback.format_exc()}")
         raise HTTPException(
             status_code=500,
             detail="Internal server error. Please try again."
@@ -225,18 +245,22 @@ def get_guest_vote_stats(
     db: Session = Depends(get_db)
 ):
     """Get guest voting statistics"""
+    print(f"[GUEST_STATS] Starting guest stats request")
     try:
         original_cookie = request.cookies.get("guest_session")
         session_id = get_guest_session_id(request)
-        
+        print(f"[GUEST_STATS] Session: {session_id}, cookie_present={original_cookie is not None}")
+
         # Get remaining votes with error handling
         try:
+            print(f"[GUEST_STATS] Getting remaining votes...")
             remaining_votes = get_remaining_guest_votes(session_id, db)
+            print(f"[GUEST_STATS] Remaining votes: {remaining_votes}")
         except Exception as e:
             # If guest voting tables don't exist, return full limit
-            print(f"Guest voting tables may not exist: {e}")
+            print(f"[GUEST_STATS] Guest voting tables may not exist: {e}")
             remaining_votes = 10  # Default limit
-    
+
         payload = {
             "remaining_votes": remaining_votes,
             "total_limit": 10,
@@ -251,12 +275,15 @@ def get_guest_vote_stats(
                 httponly=False,
                 samesite="Lax"
             )
-        
+
+        print(f"[GUEST_STATS] Returning stats: {payload}")
         return resp
-    
+
     except Exception as e:
         # Log unexpected errors but return a proper response
-        print(f"Unexpected error in guest stats: {e}")
+        print(f"[GUEST_STATS] Unexpected error: {type(e).__name__}: {e}")
+        import traceback
+        print(f"[GUEST_STATS] Traceback: {traceback.format_exc()}")
         return JSONResponse(content={
             "remaining_votes": 10,
             "total_limit": 10,
