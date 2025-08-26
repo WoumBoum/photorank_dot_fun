@@ -564,12 +564,7 @@ nav {
     top: -6px;
 }
 
-.progress-tick.top-10 {
-    background-color: var(--progress-fill);
-    opacity: 0.6;
-    height: 16px;
-    top: -5px;
-}
+
 
 .progress-tick-label {
     position: absolute;

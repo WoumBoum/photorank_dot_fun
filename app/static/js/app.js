@@ -297,7 +297,8 @@ class PhotoRankApp {
                 data.progress, 
                 data.progress_percentage,
                 data.next_top5_pairs,
-                data.next_top10_pairs
+                data.next_top10_pairs,
+                data.is_top_match
             );
             
             // Show important match UI if applicable
@@ -309,7 +310,7 @@ class PhotoRankApp {
         }
     }
     
-    updateProgressDisplay(progressText, progressPercentage, nextTop5Pairs, nextTop10Pairs) {
+    updateProgressDisplay(progressText, progressPercentage, nextTop5Pairs, nextTop10Pairs, isTopMatch) {
         // Find or create progress container
         let progressContainer = document.getElementById('voting-progress');
         if (!progressContainer) {
@@ -347,17 +348,17 @@ class PhotoRankApp {
             
             progressContainer.innerHTML = progressBarHTML;
             
-            // Add ticks to progress bar (simplified - in real implementation, we'd need total pairs count)
-            // For now, we'll add ticks at fixed intervals that match the backend logic
-            this.addProgressBarTicks(progressContainer, progressPercentage);
+            // Add ticks to progress bar (only for Top 5 matches)
+            this.addProgressBarTicks(progressContainer, progressPercentage, isTopMatch);
         } else {
             progressContainer.innerHTML = '';
         }
     }
 
-    addProgressBarTicks(progressContainer, progressPercentage) {
-        // Simplified implementation - adds ticks at fixed intervals
-        // In a real implementation, we'd need the total pairs count from the backend
+    addProgressBarTicks(progressContainer, progressPercentage, isTopMatch) {
+        // Only add ticks for Top 5 matches
+        if (isTopMatch !== 'TOP_5') return;
+        
         const progressBar = progressContainer.querySelector('.progress-bar');
         if (!progressBar) return;
         
@@ -377,8 +378,6 @@ class PhotoRankApp {
                 progressBar.appendChild(label);
             }
         }
-        
-
     }
 
     showImportantMatchUI(matchType) {

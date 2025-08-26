@@ -12,6 +12,52 @@ from app import models
 from app.config import settings
 from app.database import Base, get_db
 from app.main import app
+
+# Create test app without TrustedHostMiddleware for testing
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+from starlette.middleware.sessions import SessionMiddleware
+
+# Import all routers
+from app.routers import auth, photos, votes, users, categories, analytics
+from app.routers.websocket import websocket_endpoint
+
+# Create test app
+app_test = FastAPI(
+    title="PhotoRank Test",
+    description="Test API for PhotoRank",
+    version="1.0.0",
+    docs_url="/api/docs",
+    redoc_url="/api/redoc", 
+    openapi_url="/api/openapi.json"
+)
+
+# Session middleware only (no TrustedHostMiddleware for tests)
+app_test.add_middleware(SessionMiddleware, secret_key="test-secret-key")
+
+# CORS middleware
+app_test.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# Static files
+app_test.mount("/static", StaticFiles(directory="app/static"), name="static")
+
+# API routes
+app_test.include_router(auth.router)
+app_test.include_router(photos.router, prefix="/api")
+app_test.include_router(votes.router, prefix="/api")
+app_test.include_router(users.router, prefix="/api")
+app_test.include_router(categories.router, prefix="/api")
+app_test.include_router(analytics.router)
+
+# WebSocket endpoint
+app_test.add_api_websocket_route("/ws", websocket_endpoint)
 from app.oauth2 import create_access_token
 
 # Test database URL
@@ -61,7 +107,7 @@ def client(session):
     original_upload_dir = photos.UPLOAD_DIR
     photos.UPLOAD_DIR = Path(test_upload_dir)
     
-    yield TestClient(app)
+    yield TestClient(app, base_url="http://localhost")
     
     # Cleanup
     app.dependency_overrides.clear()
