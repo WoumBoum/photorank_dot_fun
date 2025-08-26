@@ -562,6 +562,12 @@ class PhotoRankApp {
             // Ensure we are still on the same pair when sending
             if (nonceAtClick !== this._pairNonce) { this._voteInFlight = false; return; }
 
+            console.log('[GUEST_VOTE] Sending vote request:', {
+                winner_id: winner.id,
+                loser_id: loser.id,
+                session_id: document.cookie.includes('guest_session') ? 'present' : 'none'
+            });
+
             const response = await fetch('/api/votes/guest', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -569,17 +575,41 @@ class PhotoRankApp {
                 credentials: 'include'  // Important for cookies
             });
 
+            console.log('[GUEST_VOTE] Response received:', {
+                status: response.status,
+                statusText: response.statusText,
+                headers: Object.fromEntries(response.headers.entries())
+            });
+
             if (response.status === 429) {
                 // Guest vote limit reached
                 const errorData = await response.json();
+                console.log('[GUEST_VOTE] Rate limit hit:', errorData);
                 this.showGuestLimitMessage(errorData.detail);
                 this._voteInFlight = false;
                 return;
             }
 
             if (!response.ok) {
-                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                // Try to get detailed error information
+                let errorDetails = `HTTP ${response.status}: ${response.statusText}`;
+                try {
+                    const errorText = await response.text();
+                    console.error('[GUEST_VOTE] Error response body:', errorText);
+                    try {
+                        const errorJson = JSON.parse(errorText);
+                        errorDetails += ` - ${errorJson.detail || JSON.stringify(errorJson)}`;
+                    } catch {
+                        errorDetails += ` - ${errorText}`;
+                    }
+                } catch (e) {
+                    console.error('[GUEST_VOTE] Could not read error response:', e);
+                }
+                throw new Error(errorDetails);
             }
+
+            const responseData = await response.json();
+            console.log('[GUEST_VOTE] Success response:', responseData);
 
             // Update guest vote counter
             await this.updateGuestVoteCounter();
@@ -603,7 +633,11 @@ class PhotoRankApp {
             }, 250);
 
         } catch (error) {
-            console.error('Error submitting guest vote:', error);
+            console.error('[GUEST_VOTE] Detailed error:', {
+                message: error.message,
+                stack: error.stack,
+                name: error.name
+            });
             if (error.message.includes('429')) {
                 this.showGuestLimitMessage('Guest vote limit reached. Please sign up to continue voting.');
             }
