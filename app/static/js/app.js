@@ -52,7 +52,7 @@ class PhotoRankApp {
         if (response.status === 401 || response.status === 403) {
             // Token expired or invalid - clear and redirect with user-friendly message
             localStorage.removeItem('token');
-            
+
             // Show a brief message before redirect
             const message = document.createElement('div');
             message.style.cssText = `
@@ -69,12 +69,12 @@ class PhotoRankApp {
             `;
             message.textContent = 'Session expired. Redirecting to login...';
             document.body.appendChild(message);
-            
+
             setTimeout(() => {
                 document.body.removeChild(message);
                 window.location.href = '/login';
             }, 2000);
-            
+
             return Promise.reject(new Error('Authentication required'));
         }
 
@@ -85,14 +85,14 @@ class PhotoRankApp {
         const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
         const wsUrl = `${protocol}//${window.location.host}/ws`;
         console.log('Connecting to WebSocket:', wsUrl);
-        
+
         try {
             this.ws = new WebSocket(wsUrl);
-            
+
             this.ws.onopen = () => {
                 console.log('WebSocket connected successfully');
             };
-            
+
             this.ws.onmessage = (event) => {
                 const data = JSON.parse(event.data);
                 if (data.type === 'new_pair') {
@@ -103,7 +103,7 @@ class PhotoRankApp {
             this.ws.onerror = (error) => {
                 console.error('WebSocket error:', error);
             };
-            
+
             this.ws.onclose = (event) => {
                 console.log('WebSocket closed:', event.code, event.reason);
             };
@@ -150,7 +150,7 @@ class PhotoRankApp {
         // File upload
         const uploadArea = document.getElementById('upload-area');
         const fileInput = document.getElementById('file-input');
-        
+
         if (uploadArea && fileInput) {
             uploadArea.addEventListener('click', () => fileInput.click());
             uploadArea.addEventListener('dragover', (e) => {
@@ -209,29 +209,29 @@ class PhotoRankApp {
         try {
             // Always hide the no-choices message and show photos when making a new request
             this.hideNoMoreChoices();
-            
+
             const response = await this.makeAuthenticatedRequest('/api/photos/pair/session', {
                 credentials: 'include',
                 cache: 'no-cache' // Ensure fresh data
             });
-            
+
             if (response.status === 400) {
                 // No category selected
                 window.location.href = '/categories';
                 return;
             }
-            
+
             if (response.status === 410) {
                 // No more pairs to vote on
                 this.showNoMoreChoices();
                 return;
             }
-            
+
             if (!response.ok) {
                 console.error('HTTP Error:', response.status, response.statusText);
                 throw new Error(`HTTP ${response.status}: ${response.statusText}`);
             }
-            
+
             const data = await response.json();
             this.displayNewPair(data);
         } catch (error) {
@@ -250,7 +250,7 @@ class PhotoRankApp {
         if (noChoicesMessage) {
             noChoicesMessage.style.display = 'none';
         }
-        
+
         // Show photo containers
         const container1 = document.getElementById('photo1');
         const container2 = document.getElementById('photo2');
@@ -260,21 +260,21 @@ class PhotoRankApp {
 
     displayNewPair(data) {
         if (!data || !data.photos || data.photos.length !== 2) return;
-        
+
         this.currentPair = data.photos;
-        
+
         const img1 = document.getElementById('img1');
         const img2 = document.getElementById('img2');
         const container1 = document.getElementById('photo1');
         const container2 = document.getElementById('photo2');
         const noChoicesMessage = document.getElementById('no-choices-message');
-        
+
         if (img1 && img2 && container1 && container2) {
             // Hide no choices message if it exists
             if (noChoicesMessage) {
                 noChoicesMessage.style.display = 'none';
             }
-            
+
             // Reset all styles before loading new images
             container1.style.opacity = '1';
             container2.style.opacity = '1';
@@ -282,26 +282,26 @@ class PhotoRankApp {
             container2.style.display = 'block';
             img1.style.opacity = '0';
             img2.style.opacity = '0';
-            
+
             img1.src = `/api/photos/${data.photos[0].filename}`;
             img2.src = `/api/photos/${data.photos[1].filename}`;
-            
+
             // Add fade effect
             setTimeout(() => {
                 img1.style.opacity = '1';
                 img2.style.opacity = '1';
             }, 50);
-            
+
             // Update progress display if available
             this.updateProgressDisplay(
-                data.progress, 
+                data.progress,
                 data.progress_percentage,
                 data.votes_until_important,
                 data.is_important_match,
                 data.photo1_rank,
                 data.photo2_rank
             );
-            
+
             // Show important match UI if applicable
             if (data.is_important_match) {
                 this.showImportantMatchUI(data.photo1_rank, data.photo2_rank);
@@ -310,7 +310,7 @@ class PhotoRankApp {
             }
         }
     }
-    
+
     updateProgressDisplay(progressText, progressPercentage, votesUntilImportant, isImportantMatch, photo1Rank, photo2Rank) {
         // Find or create progress container
         let progressContainer = document.getElementById('voting-progress');
@@ -318,14 +318,14 @@ class PhotoRankApp {
             progressContainer = document.createElement('div');
             progressContainer.id = 'voting-progress';
             progressContainer.className = 'progress-container';
-            
+
             // Insert after the vote question
             const voteQuestion = document.getElementById('vote-question');
             if (voteQuestion && voteQuestion.parentNode) {
                 voteQuestion.parentNode.insertBefore(progressContainer, voteQuestion.nextSibling);
             }
         }
-        
+
         if (progressText && progressPercentage !== undefined) {
             // Build anticipation text for important matches
             let anticipationText = '';
@@ -339,7 +339,7 @@ class PhotoRankApp {
                     anticipationText = `IMPORTANT MATCH IN ${votesUntilImportant} VOTES • `;
                 }
             }
-            
+
             // Create progress bar
             let progressBarHTML = `
                 <div class="progress-text">${anticipationText}Progress: ${progressText} pairs</div>
@@ -348,9 +348,9 @@ class PhotoRankApp {
                 </div>
                 <div class="progress-text" style="margin-top: 0.25rem; font-size: 0.8rem;">${progressPercentage.toFixed(1)}% complete</div>
             `;
-            
+
             progressContainer.innerHTML = progressBarHTML;
-            
+
             // Add ticks for important match milestones
             this.addImportantMatchTicks(progressContainer, votesUntilImportant);
         } else {
@@ -381,7 +381,7 @@ class PhotoRankApp {
             // Center the tick on its percent position and clamp to bar bounds
             const tickWidthPx = 3; // keep in sync with CSS .progress-tick.important-match width
             const clamped = Math.max(0, Math.min(100, percent));
-            tick.style.left = `calc(${clamped}% - ${tickWidthPx / 2}px)`;
+            tick.style.left = `calc(${clamped}% - ${tickWidthPx / 2}px-2)`;
             progressBar.appendChild(tick);
 
             // Add label each 40 votes for readability; labels are centered via CSS translateX(-50%)
@@ -398,18 +398,18 @@ class PhotoRankApp {
     showImportantMatchUI(photo1Rank, photo2Rank) {
         // Remove any existing important match UI
         this.hideImportantMatchUI();
-        
+
         // Create important match banner
         const banner = document.createElement('div');
         banner.id = 'important-match-banner';
         banner.className = 'important-match-banner';
-        
+
         // Add rank information
         banner.innerHTML = `
             IMPORTANT MATCHUP: 
             <strong>#${photo1Rank}</strong> vs <strong>#${photo2Rank}</strong>
         `;
-        
+
         // Insert before the photo pair
         const photoPair = document.querySelector('.photo-pair');
         if (photoPair && photoPair.parentNode) {
@@ -429,11 +429,11 @@ class PhotoRankApp {
         const img2 = document.getElementById('img2');
         const container1 = document.getElementById('photo1');
         const container2 = document.getElementById('photo2');
-        
+
         // Hide photo containers
         if (container1) container1.style.display = 'none';
         if (container2) container2.style.display = 'none';
-        
+
         // Create or show no choices message
         let noChoicesMessage = document.getElementById('no-choices-message');
         if (!noChoicesMessage) {
@@ -456,7 +456,7 @@ class PhotoRankApp {
                     <a href="${uploadHref}" class="btn">Upload New Photo</a>
                 </div>
             `;
-            
+
             // Insert after the voting container
             const votingContainer = document.querySelector('.voting-container') || document.querySelector('.vote-section');
             if (votingContainer) {
@@ -471,18 +471,18 @@ class PhotoRankApp {
 
     async handleVote(event) {
         if (!this.currentPair) return;
-        
+
         if (!this.isAuthenticated()) {
             window.location.href = '/login';
             return;
         }
-        
+
         const clickedContainer = event.currentTarget;
         const isFirst = clickedContainer.id === 'photo1';
-        
+
         const winner = isFirst ? this.currentPair[0] : this.currentPair[1];
         const loser = isFirst ? this.currentPair[1] : this.currentPair[0];
-        
+
         try {
             await this.makeAuthenticatedRequest('/api/votes', {
                 method: 'POST',
@@ -494,18 +494,18 @@ class PhotoRankApp {
                     loser_id: loser.id
                 })
             });
-            
+
             // Fade out loser
-            const loserContainer = isFirst ? 
-                document.getElementById('photo2') : 
+            const loserContainer = isFirst ?
+                document.getElementById('photo2') :
                 document.getElementById('photo1');
-            
+
             loserContainer.style.opacity = '0.3';
-            
+
             setTimeout(() => {
                 this.loadPhotoPair();
             }, 250);
-            
+
         } catch (error) {
             if (error.message !== 'Authentication required') {
                 console.error('Error submitting vote:', error);
@@ -525,7 +525,7 @@ class PhotoRankApp {
                     credentials: 'include' // Important for session cookies
                 });
             }
-            
+
             if (!response.ok) {
                 // If session-based call failed due to no category, redirect to picker
                 if (!categoryName && response.status === 400) {
@@ -534,7 +534,7 @@ class PhotoRankApp {
                 }
                 throw new Error('Failed to load leaderboard');
             }
-            
+
             const photos = await response.json();
             this.displayLeaderboard(photos);
         } catch (error) {
@@ -545,9 +545,9 @@ class PhotoRankApp {
     displayLeaderboard(photos) {
         const grid = document.getElementById('leaderboard-grid');
         if (!grid) return;
-        
+
         grid.innerHTML = '';
-        
+
         photos.forEach((photo, index) => {
             const card = document.createElement('div');
             card.className = 'photo-card';
@@ -570,21 +570,21 @@ class PhotoRankApp {
             window.location.href = '/login';
             return;
         }
-        
+
         console.log('[STATS] Loading stats for authenticated user');
-        
+
         try {
             const response = await this.makeAuthenticatedRequest('/api/users/stats');
-            
+
             console.log('[STATS] Response status:', response.status);
-            
+
             if (!response.ok) {
                 console.error('[STATS] Stats endpoint error:', response.status, response.statusText);
                 const errorText = await response.text();
                 console.error('[STATS] Error response:', errorText);
                 throw new Error(`HTTP ${response.status}: ${errorText}`);
             }
-            
+
             const stats = await response.json();
             console.log('[STATS] Received stats:', stats);
             this.displayStats(stats);
@@ -610,7 +610,7 @@ class PhotoRankApp {
         // Preload current username
         this.makeAuthenticatedRequest('/api/users/me').then(r => r.json()).then(me => {
             input.value = me.username || '';
-        }).catch(() => {});
+        }).catch(() => { });
 
         saveBtn.addEventListener('click', async () => {
             const newName = (input.value || '').trim().toLowerCase();
@@ -645,26 +645,26 @@ class PhotoRankApp {
     displayStats(stats) {
         const grid = document.getElementById('stats-grid');
         if (!grid) return;
-        
+
         console.log('[STATS] Displaying stats:', stats);
-        
+
         grid.innerHTML = '';
-        
+
         if (!stats || !stats.photos || stats.photos.length === 0) {
             console.log('[STATS] No photos found');
             grid.innerHTML = '<p>No photos uploaded yet. <a href="/upload">Upload your first photo</a></p>';
             return;
         }
-        
+
         console.log(`[STATS] Displaying ${stats.photos.length} photos`);
-        
+
         stats.photos.forEach(photo => {
             const card = document.createElement('div');
             card.className = 'stat-card';
-            
-            const winRate = photo.total_duels > 0 ? 
+
+            const winRate = photo.total_duels > 0 ?
                 Math.round((photo.wins / photo.total_duels) * 100) : 0;
-            
+
             card.innerHTML = `
                 <img src="/api/photos/${photo.filename}" alt="Your photo">
                 <h3>Rank #${photo.rank}</h3>
@@ -686,17 +686,17 @@ class PhotoRankApp {
         if (!confirm('Are you sure you want to delete this photo? This action cannot be undone.')) {
             return;
         }
-        
+
         const card = buttonElement.closest('.stat-card');
         const originalText = buttonElement.textContent;
         buttonElement.textContent = 'Deleting...';
         buttonElement.disabled = true;
-        
+
         try {
             const response = await this.makeAuthenticatedRequest(`/api/photos/${photoId}`, {
                 method: 'DELETE'
             });
-            
+
             if (response.ok) {
                 // Remove the card from the grid with fade effect
                 card.style.opacity = '0.5';
@@ -769,88 +769,88 @@ class PhotoRankApp {
 }
 
 // Global debug logging function
-window.debugLog = function(message, type = 'info') {
+window.debugLog = function (message, type = 'info') {
     const debugPanel = document.getElementById('debug-panel');
     if (!debugPanel) {
         console.log(`[DEBUG] ${type}: ${message}`);
         return;
     }
-    
+
     const logEntry = document.createElement('div');
     logEntry.className = 'debug-log';
     logEntry.innerHTML = `[${new Date().toLocaleTimeString()}] ${type.toUpperCase()}: ${message}`;
-    
+
     const logContainer = debugPanel.querySelector('.debug-content');
     if (logContainer) {
         logContainer.appendChild(logEntry);
         logContainer.scrollTop = logContainer.scrollHeight;
     }
-    
+
     // Also log to console for backup
     console.log(`[DEBUG] ${type}: ${message}`);
 };
 
 // Theme toggle functionality with debug logging
-window.initThemeToggle = function() {
+window.initThemeToggle = function () {
     window.debugLog('initThemeToggle() called');
-    
+
     const themeToggle = document.getElementById('theme-toggle');
     if (!themeToggle) {
         window.debugLog('Theme toggle button not found', 'error');
         return;
     }
-    
+
     window.debugLog('Theme toggle button found', 'success');
 
     // Load saved theme or use system preference
     const savedTheme = localStorage.getItem('theme');
     const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
     const currentTheme = savedTheme || (prefersDark ? 'dark' : 'light');
-    
+
     window.debugLog(`System prefers dark: ${prefersDark}`);
     window.debugLog(`Saved theme: ${savedTheme}`);
     window.debugLog(`Current theme: ${currentTheme}`);
-    
+
     document.documentElement.setAttribute('data-theme', currentTheme);
     window.debugLog(`Set data-theme to: ${currentTheme}`);
-    
+
     window.updateToggleButton(currentTheme);
 
-    themeToggle.onclick = function() {
+    themeToggle.onclick = function () {
         window.debugLog('Theme toggle clicked');
-        
+
         const currentTheme = document.documentElement.getAttribute('data-theme');
         window.debugLog(`Current theme from data-theme: ${currentTheme}`);
-        
+
         const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
         window.debugLog(`New theme will be: ${newTheme}`);
-        
+
         document.documentElement.setAttribute('data-theme', newTheme);
         window.debugLog(`Set data-theme to: ${newTheme}`);
-        
+
         localStorage.setItem('theme', newTheme);
         window.debugLog(`Saved theme to localStorage: ${newTheme}`);
-        
+
         window.updateToggleButton(newTheme);
         window.debugLog(`Updated toggle button for: ${newTheme}`);
     };
-    
+
     window.debugLog('Theme toggle initialized successfully');
 };
 
-window.updateToggleButton = function(theme) {
+window.updateToggleButton = function (theme) {
     const themeToggle = document.getElementById('theme-toggle');
     if (!themeToggle) {
         window.debugLog('Cannot update toggle button - not found', 'error');
         return;
     }
-    
+
     const newText = theme === 'dark' ? '◑' : '◐';
     const newTitle = theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode';
-    
+
     themeToggle.textContent = newText;
     themeToggle.title = newTitle;
-    
+
     window.debugLog(`Updated button: text=${newText}, title=${newTitle}`);
 };
 
