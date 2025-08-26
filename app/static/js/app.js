@@ -381,7 +381,7 @@ class PhotoRankApp {
             // Center the tick on its percent position and clamp to bar bounds
             const tickWidthPx = 3; // keep in sync with CSS .progress-tick.important-match width
             const clamped = Math.max(0, Math.min(100, percent));
-            tick.style.left = `calc(${clamped}% - ${tickWidthPx / 2}px-2)`;
+            tick.style.left = `calc(${clamped}% - ${tickWidthPx / 2}px - 2px)`;
             progressBar.appendChild(tick);
 
             // Add label each 40 votes for readability; labels are centered via CSS translateX(-50%)
