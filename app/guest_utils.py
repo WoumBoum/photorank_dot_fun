@@ -124,6 +124,13 @@ def record_guest_vote(session_id: str, winner_id: int, loser_id: int,
                 vote_count=1
             )
             db.add(vote_limit)
+        # Ensure visibility of new/updated counters during this request
+        try:
+            db.flush()
+        except Exception:
+            pass
+        # Make changes visible immediately for any subsequent reads in same request cycle
+        db.flush()
     except Exception:
         # If guest voting tables don't exist, silently fail
         # This allows the main vote functionality to work even without guest tables

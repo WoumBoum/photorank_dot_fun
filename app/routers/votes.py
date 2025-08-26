@@ -160,6 +160,7 @@ def create_guest_vote(
                     vote_limit = None
             
             if vote_limit and vote_limit.vote_count >= 10:
+                print(f"[GUEST_VOTE][LIMIT] session_id={session_id} vote_count={vote_limit.vote_count}/10")
                 raise HTTPException(
                     status_code=429, 
                     detail="Guest vote limit reached. Please sign up to continue voting."
