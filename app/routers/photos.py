@@ -153,11 +153,11 @@ def get_photo_pair_session(
         user_votes = db.query(Vote).join(Photo, (Vote.winner_id == Photo.id) | (Vote.loser_id == Photo.id))\
             .filter(Photo.category_id == selected_category_id, Vote.user_id == current_user.id).all()
         
-        # Check if this should be an important match
+        # Check if this should be an important match (per-category count)
         important_match_interval = 20
-        tv = (current_user.total_votes or 0)
-        next_vote_number = tv + 1
-        is_important_match = next_vote_number % important_match_interval == 0
+        per_cat_votes = len(user_votes)
+        next_vote_number = per_cat_votes + 1
+        is_important_match = (next_vote_number % important_match_interval) == 0
         
         # Important match tracking will be implemented separately
         next_top5_pairs = None
@@ -185,11 +185,11 @@ def get_photo_pair_session(
         if not available_pairs:
             raise HTTPException(status_code=410, detail="No more photo pairs to vote on in this category")
         
-        # Check if this should be an important match
+        # Check if this should be an important match (per-category count)
         important_match_interval = 20
-        tv = (current_user.total_votes or 0)
-        next_vote_number = tv + 1
-        is_important_match = next_vote_number % important_match_interval == 0
+        per_cat_votes = len(user_votes)
+        next_vote_number = per_cat_votes + 1
+        is_important_match = (next_vote_number % important_match_interval) == 0
         
         # For important matches, select from top-ranked pairs that haven't been voted on
         selected_pair = None
@@ -260,14 +260,12 @@ def get_photo_pair_session(
     photo2_rank = None
     
     if current_user and photos and len(photos) == 2:
-        # Use the same important_match_interval and tv from earlier
+        # Use the same important_match_interval and per-category count from earlier
         important_match_interval = 20
-        tv = (current_user.total_votes or 0)
-        next_vote_number = tv + 1
+        per_cat_votes = len(user_votes) if current_user else 0
+        next_vote_number = per_cat_votes + 1
         
-        # Fix timing: check if the NEXT vote will be an important match
-        # Important matches occur at votes 20, 40, 60, 80, 100, etc.
-        # So we check if (current_votes + 1) % important_match_interval == 0
+        # Fix timing: check if the NEXT vote will be an important match using per-category votes
         votes_until_important = important_match_interval - (next_vote_number % important_match_interval)
         if votes_until_important == important_match_interval:
             votes_until_important = 0  # Exactly at the interval
