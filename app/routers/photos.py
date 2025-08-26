@@ -152,29 +152,8 @@ def get_photo_pair_session(
         user_votes = db.query(Vote).join(Photo, (Vote.winner_id == Photo.id) | (Vote.loser_id == Photo.id))\
             .filter(Photo.category_id == selected_category_id, Vote.user_id == current_user.id).all()
         
-        # Calculate actual remaining Top 5 matches
+        # Important match tracking will be implemented separately
         next_top5_pairs = None
-        if len(all_photos) >= 5:
-            # Get current rankings for all photos in category
-            ranked_photos = db.query(Photo).filter(
-                Photo.category_id == selected_category_id
-            ).order_by(Photo.elo_rating.desc()).all()
-            
-            # Get top 5 photo IDs
-            top5_photos = [p.id for p in ranked_photos[:5]]
-            
-            # Calculate all possible Top 5 pairs (n choose 2 for top 5 photos)
-            total_top5_pairs = len(top5_photos) * (len(top5_photos) - 1) // 2
-            
-            # Count already voted Top 5 pairs
-            voted_top5_pairs = 0
-            for vote in user_votes:
-                if vote.winner_id in top5_photos and vote.loser_id in top5_photos:
-                    voted_top5_pairs += 1
-            
-            # Calculate remaining Top 5 pairs
-            remaining_top5_pairs = total_top5_pairs - voted_top5_pairs
-            next_top5_pairs = remaining_top5_pairs if remaining_top5_pairs > 0 else None
         
         # Create set of already voted pairs (as sorted tuples to handle bidirectional votes)
         voted_pairs = set()
@@ -237,21 +216,28 @@ def get_photo_pair_session(
         )
         result.append(photo_out)
     
-    # Detect if this is an important match (Top 5 or Top 10)
-    is_top_match = None
+    # Important match detection
+    votes_until_important = None
+    is_important_match = False
+    photo1_rank = None
+    photo2_rank = None
+    
     if current_user and photos and len(photos) == 2:
-        # Get current rankings for all photos in category
-        ranked_photos = db.query(Photo).filter(
-            Photo.category_id == selected_category_id
-        ).order_by(Photo.elo_rating.desc()).all()
+        important_match_interval = 20
+        votes_until_important = important_match_interval - (current_user.total_votes % important_match_interval)
         
-        # Find ranks of the current photos
-        photo1_rank = next((i+1 for i, p in enumerate(ranked_photos) if p.id == photos[0].id), None)
-        photo2_rank = next((i+1 for i, p in enumerate(ranked_photos) if p.id == photos[1].id), None)
-        
-        if photo1_rank and photo2_rank:
-            if photo1_rank <= 5 and photo2_rank <= 5:
-                is_top_match = "TOP_5"
+        # Check if this is an important match
+        if votes_until_important == 1:
+            is_important_match = True
+            
+            # Get current rankings for all photos in category
+            ranked_photos = db.query(Photo).filter(
+                Photo.category_id == selected_category_id
+            ).order_by(Photo.elo_rating.desc()).all()
+            
+            # Find ranks of the current photos
+            photo1_rank = next((i+1 for i, p in enumerate(ranked_photos) if p.id == photos[0].id), None)
+            photo2_rank = next((i+1 for i, p in enumerate(ranked_photos) if p.id == photos[1].id), None)
     
     # Add progress info for authenticated users
     if current_user:
@@ -259,8 +245,10 @@ def get_photo_pair_session(
             photos=result,
             progress=f"{voted_pairs_count}/{total_possible_pairs}",
             progress_percentage=progress_percentage,
-            next_top5_pairs=next_top5_pairs,
-            is_top_match=is_top_match
+            votes_until_important=votes_until_important,
+            is_important_match=is_important_match,
+            photo1_rank=photo1_rank,
+            photo2_rank=photo2_rank
         )
     else:
         return PhotoPair(photos=result)

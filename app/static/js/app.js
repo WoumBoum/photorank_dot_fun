@@ -296,20 +296,22 @@ class PhotoRankApp {
             this.updateProgressDisplay(
                 data.progress, 
                 data.progress_percentage,
-                data.next_top5_pairs,
-                data.is_top_match
+                data.votes_until_important,
+                data.is_important_match,
+                data.photo1_rank,
+                data.photo2_rank
             );
             
             // Show important match UI if applicable
-            if (data.is_top_match) {
-                this.showImportantMatchUI(data.is_top_match);
+            if (data.is_important_match) {
+                this.showImportantMatchUI(data.photo1_rank, data.photo2_rank);
             } else {
                 this.hideImportantMatchUI();
             }
         }
     }
     
-    updateProgressDisplay(progressText, progressPercentage, nextTop5Pairs, isTopMatch) {
+    updateProgressDisplay(progressText, progressPercentage, votesUntilImportant, isImportantMatch, photo1Rank, photo2Rank) {
         // Find or create progress container
         let progressContainer = document.getElementById('voting-progress');
         if (!progressContainer) {
@@ -325,61 +327,61 @@ class PhotoRankApp {
         }
         
         if (progressText && progressPercentage !== undefined) {
-            // Build anticipation text - only show when very close (≤10 votes)
+            // Build anticipation text for important matches
             let anticipationText = '';
-            if (nextTop5Pairs !== null && nextTop5Pairs !== undefined) {
-                if (nextTop5Pairs === 0) {
-                    anticipationText = 'TOP 5 MATCH! • ';
-                } else if (nextTop5Pairs <= 10) {
-                    anticipationText = `TOP 5 IN ${nextTop5Pairs} • `;
+            if (votesUntilImportant !== null && votesUntilImportant !== undefined) {
+                if (votesUntilImportant === 1) {
+                    anticipationText = 'IMPORTANT MATCH! • ';
+                } else if (votesUntilImportant <= 5) {
+                    anticipationText = `IMPORTANT MATCH IN ${votesUntilImportant} VOTES • `;
                 }
             }
             
-            // Create progress bar with ticks
+            // Create progress bar
             let progressBarHTML = `
                 <div class="progress-text">${anticipationText}Progress: ${progressText} pairs</div>
                 <div class="progress-bar">
                     <div class="progress-fill" style="width: ${progressPercentage}%;"></div>
-                    <!-- Ticks will be added here -->
                 </div>
                 <div class="progress-text" style="margin-top: 0.25rem; font-size: 0.8rem;">${progressPercentage.toFixed(1)}% complete</div>
             `;
             
             progressContainer.innerHTML = progressBarHTML;
             
-            // Add ticks to progress bar (only for Top 5 matches)
-            this.addProgressBarTicks(progressContainer, progressPercentage, isTopMatch);
+            // Add ticks for important match milestones
+            this.addImportantMatchTicks(progressContainer, votesUntilImportant);
         } else {
             progressContainer.innerHTML = '';
         }
     }
 
-    addProgressBarTicks(progressContainer, progressPercentage, isTopMatch) {
-        // Only add ticks for Top 5 matches
-        if (isTopMatch !== 'TOP_5') return;
+    addImportantMatchTicks(progressContainer, votesUntilImportant) {
+        if (votesUntilImportant === null || votesUntilImportant === undefined) return;
         
         const progressBar = progressContainer.querySelector('.progress-bar');
         if (!progressBar) return;
         
-        // Add ticks at 10% intervals (Top 5 milestones)
-        for (let i = 10; i <= 100; i += 10) {
+        const importantMatchInterval = 20;
+        
+        // Add ticks at every 20-vote milestone
+        for (let i = importantMatchInterval; i <= 100; i += importantMatchInterval) {
             const tick = document.createElement('div');
-            tick.className = 'progress-tick top-5';
+            tick.className = 'progress-tick important-match';
             tick.style.left = `${i}%`;
             progressBar.appendChild(tick);
             
             // Add label for major milestones
-            if (i % 20 === 0) {
+            if (i % 40 === 0) {
                 const label = document.createElement('div');
                 label.className = 'progress-tick-label';
                 label.style.left = `${i}%`;
-                label.textContent = `${i}%`;
+                label.textContent = `${i} votes`;
                 progressBar.appendChild(label);
             }
         }
     }
 
-    showImportantMatchUI(matchType) {
+    showImportantMatchUI(photo1Rank, photo2Rank) {
         // Remove any existing important match UI
         this.hideImportantMatchUI();
         
@@ -388,9 +390,11 @@ class PhotoRankApp {
         banner.id = 'important-match-banner';
         banner.className = 'important-match-banner';
         
-        // CSS class handles styling with dark mode support
-        
-        banner.textContent = 'TOP 5 MATCHUP';
+        // Add rank information
+        banner.innerHTML = `
+            IMPORTANT MATCHUP: 
+            <strong>#${photo1Rank}</strong> vs <strong>#${photo2Rank}</strong>
+        `;
         
         // Insert before the photo pair
         const photoPair = document.querySelector('.photo-pair');

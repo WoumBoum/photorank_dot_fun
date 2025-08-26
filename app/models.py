@@ -14,6 +14,7 @@ class User(Base):
     username = Column(String, nullable=False, unique=True)
     provider = Column(String, nullable=False)  # 'github' or 'google'
     provider_id = Column(String, nullable=False, unique=True)
+    total_votes = Column(Integer, nullable=False, default=0)
     created_at = Column(TIMESTAMP(timezone=True),
                         nullable=False, server_default=text('now()'))
 

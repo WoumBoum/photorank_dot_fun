@@ -66,6 +66,9 @@ def create_vote(
     loser.total_duels += 1
     winner.wins += 1
     
+    # Update user's total votes count
+    current_user.total_votes += 1
+    
     # Create vote record
     new_vote = Vote(
         user_id=current_user.id,
