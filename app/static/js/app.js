@@ -217,7 +217,9 @@ class PhotoRankApp {
             // Always hide the no-choices message and show photos when making a new request
             this.hideNoMoreChoices();
 
-            const response = await this.makeAuthenticatedRequest('/api/photos/pair/session', {
+            const endpoint = this.isAuthenticated() ? '/api/photos/pair/session' : '/api/photos/pair/session';
+            const fetchFn = this.isAuthenticated() ? (u,o)=>this.makeAuthenticatedRequest(u,o) : (u,o)=>fetch(u, o);
+            const response = await fetchFn(endpoint, {
                 credentials: 'include',
                 cache: 'no-cache' // Ensure fresh data
             });

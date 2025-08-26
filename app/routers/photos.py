@@ -126,7 +126,10 @@ def get_photo_pair_session(
     db: Session = Depends(get_db),
     current_user: Optional[User] = Depends(get_current_user_optional)
 ):
-    """Get two random photos for voting using session-based category, excluding already voted pairs"""
+    """Get two random photos for voting using session-based category, excluding already voted pairs
+    This endpoint can be used by both authenticated and unauthenticated users. Authenticated users
+    receive progress metadata and exclusion of already-voted pairs; guests receive a random pair.
+    """
     selected_category_id = request.session.get("selected_category_id")
     is_important_match = False
     
