@@ -163,7 +163,13 @@ def create_guest_vote(
                 print(f"[GUEST_VOTE][LIMIT] session_id={session_id} vote_count={vote_limit.vote_count}/10")
                 raise HTTPException(
                     status_code=429, 
-                    detail="Guest vote limit reached. Please sign up to continue voting."
+                    detail={
+                        "message": "Guest vote limit reached. Please sign up to continue voting.",
+                        "reason": "limit_exhausted",
+                        "session_id": session_id,
+                        "vote_count": vote_limit.vote_count,
+                        "limit": 10
+                    }
                 )
         except Exception as e:
             # Distinguish between rate-limit exhaustion and backend issues
@@ -268,17 +274,28 @@ def get_guest_vote_stats(
         # Get remaining votes with error handling
         try:
             print(f"[GUEST_STATS] Getting remaining votes...")
+            # Raw debug
+            try:
+                raw = db.query(GuestVoteLimit).filter(GuestVoteLimit.session_id == session_id).first()
+                raw_count = raw.vote_count if raw else None
+                print(f"[GUEST_STATS][RAW] session_id={session_id} vote_count={raw_count}")
+            except Exception as raw_e:
+                print(f"[GUEST_STATS][RAW][ERROR] {type(raw_e).__name__}: {raw_e}")
+                raw_count = None
             remaining_votes = get_remaining_guest_votes(session_id, db)
             print(f"[GUEST_STATS] Remaining votes: {remaining_votes}")
         except Exception as e:
             # Backend issue fetching remaining votes
-            print(f"[GUEST_STATS][ERROR] Backend unavailable while fetching remaining votes: {type(e).__name__}: {e}")
+            print(f"[GUEST_STATS][FALLBACK] Backend unavailable while fetching remaining votes: {type(e).__name__}: {e}")
             remaining_votes = 0  # No votes available if backend is unavailable
 
+        # Attach reason for observability
+        reason = "limit_exhausted" if remaining_votes == 0 else "ok"
         payload = {
             "remaining_votes": remaining_votes,
             "total_limit": 10,
-            "session_id": session_id
+            "session_id": session_id,
+            "reason": reason
         }
         resp = JSONResponse(content=payload)
         if not original_cookie or original_cookie != session_id:
