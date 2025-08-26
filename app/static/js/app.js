@@ -378,14 +378,17 @@ class PhotoRankApp {
             const percent = Math.min(100, (v / totalPairs) * 100);
             const tick = document.createElement('div');
             tick.className = 'progress-tick important-match';
-            tick.style.left = `${percent}%`;
+            // Center the tick on its percent position and clamp to bar bounds
+            const tickWidthPx = 3; // keep in sync with CSS .progress-tick.important-match width
+            const clamped = Math.max(0, Math.min(100, percent));
+            tick.style.left = `calc(${clamped}% - ${tickWidthPx / 2}px)`;
             progressBar.appendChild(tick);
 
-            // Add label each 40 votes for readability
+            // Add label each 40 votes for readability; labels are centered via CSS translateX(-50%)
             if (v % 40 === 0) {
                 const label = document.createElement('div');
                 label.className = 'progress-tick-label';
-                label.style.left = `${percent}%`;
+                label.style.left = `${clamped}%`;
                 label.textContent = `${v} votes`;
                 progressBar.appendChild(label);
             }
