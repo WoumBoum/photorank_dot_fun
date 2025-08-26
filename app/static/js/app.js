@@ -130,7 +130,7 @@ class PhotoRankApp {
             if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
                 e.preventDefault();
                 // Debounce rapid repeats while a vote is being processed by disabling during fade
-                if (this._keyboardVotingLocked) return;
+                if (this._keyboardVotingLocked || this._voteInFlight || this._voteCooldown) return;
                 this._keyboardVotingLocked = true;
 
                 const container = document.getElementById(e.key === 'ArrowLeft' ? 'photo1' : 'photo2');
@@ -265,6 +265,8 @@ class PhotoRankApp {
         if (!data || !data.photos || data.photos.length !== 2) return;
 
         this.currentPair = data.photos;
+        // set per-pair nonce to avoid stale clicks during rerender
+        this._pairNonce = `${this.currentPair[0]?.id || 'x'}-${this.currentPair[1]?.id || 'y'}-${Date.now()}`;
 
         const img1 = document.getElementById('img1');
         const img2 = document.getElementById('img2');
@@ -478,6 +480,8 @@ class PhotoRankApp {
 
         // Block rapid double-submits
         if (this._voteInFlight || this._voteCooldown) return;
+        const nonceAtClick = this._pairNonce;
+        if (!this.currentPair || nonceAtClick !== this._pairNonce) return;
         this._voteInFlight = true;
 
         const clickedContainer = event.currentTarget;
@@ -489,6 +493,8 @@ class PhotoRankApp {
         try {
             if (!winner?.id || !loser?.id) return;
 
+            // Ensure we are still on the same pair when sending
+            if (nonceAtClick !== this._pairNonce) { this._voteInFlight = false; return; }
             await this.makeAuthenticatedRequest('/api/votes', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -508,6 +514,8 @@ class PhotoRankApp {
             // Short cooldown to avoid extra clicks during animation
             this._voteCooldown = true;
             setTimeout(() => {
+                // prevent stale clicks during fetch/render window
+                this.currentPair = null;
                 this.loadPhotoPair();
                 this._voteCooldown = false;
                 if (c1) c1.style.pointerEvents = '';
