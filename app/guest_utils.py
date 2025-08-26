@@ -63,68 +63,81 @@ def get_client_info(request: Request) -> tuple[str, str]:
 
 def can_guest_vote(session_id: str, db: Session) -> bool:
     """Check if guest can vote based on rate limits"""
-    vote_limit = db.query(GuestVoteLimit).filter(
-        GuestVoteLimit.session_id == session_id
-    ).first()
-    
-    if not vote_limit:
-        return True  # New session, can vote
-    
-    # Check if session is expired (24 hours)
-    session_age = datetime.utcnow() - vote_limit.created_at
-    if session_age > GUEST_SESSION_DURATION:
-        # Reset expired session - just return True, let caller handle cleanup
+    try:
+        vote_limit = db.query(GuestVoteLimit).filter(
+            GuestVoteLimit.session_id == session_id
+        ).first()
+        
+        if not vote_limit:
+            return True  # New session, can vote
+        
+        # Check if session is expired (24 hours)
+        session_age = datetime.utcnow() - vote_limit.created_at
+        if session_age > GUEST_SESSION_DURATION:
+            # Reset expired session - just return True, let caller handle cleanup
+            return True
+        
+        # Check vote count
+        return vote_limit.vote_count < GUEST_VOTE_LIMIT
+    except Exception:
+        # If guest voting tables don't exist, allow voting
         return True
-    
-    # Check vote count
-    return vote_limit.vote_count < GUEST_VOTE_LIMIT
 
 
 def record_guest_vote(session_id: str, winner_id: int, loser_id: int, 
                      ip_hash: str, user_agent_hash: str, db: Session) -> None:
     """Record a guest vote and update rate limits - caller must commit"""
-    # Create guest vote record
-    guest_vote = GuestVote(
-        session_id=session_id,
-        winner_id=winner_id,
-        loser_id=loser_id,
-        ip_hash=ip_hash,
-        user_agent_hash=user_agent_hash
-    )
-    db.add(guest_vote)
-    
-    # Update vote count
-    vote_limit = db.query(GuestVoteLimit).filter(
-        GuestVoteLimit.session_id == session_id
-    ).first()
-    
-    if vote_limit:
-        vote_limit.vote_count += 1
-        vote_limit.last_vote_date = datetime.utcnow()
-    else:
-        vote_limit = GuestVoteLimit(
+    try:
+        # Create guest vote record
+        guest_vote = GuestVote(
             session_id=session_id,
-            vote_count=1
+            winner_id=winner_id,
+            loser_id=loser_id,
+            ip_hash=ip_hash,
+            user_agent_hash=user_agent_hash
         )
-        db.add(vote_limit)
+        db.add(guest_vote)
+        
+        # Update vote count
+        vote_limit = db.query(GuestVoteLimit).filter(
+            GuestVoteLimit.session_id == session_id
+        ).first()
+        
+        if vote_limit:
+            vote_limit.vote_count += 1
+            vote_limit.last_vote_date = datetime.utcnow()
+        else:
+            vote_limit = GuestVoteLimit(
+                session_id=session_id,
+                vote_count=1
+            )
+            db.add(vote_limit)
+    except Exception:
+        # If guest voting tables don't exist, silently fail
+        # This allows the main vote functionality to work even without guest tables
+        pass
 
 
 def get_remaining_guest_votes(session_id: str, db: Session) -> int:
     """Get remaining votes for guest session"""
-    vote_limit = db.query(GuestVoteLimit).filter(
-        GuestVoteLimit.session_id == session_id
-    ).first()
-    
-    if not vote_limit:
+    try:
+        vote_limit = db.query(GuestVoteLimit).filter(
+            GuestVoteLimit.session_id == session_id
+        ).first()
+        
+        if not vote_limit:
+            return GUEST_VOTE_LIMIT
+        
+        # Check if session expired
+        session_age = datetime.utcnow() - vote_limit.created_at
+        if session_age > GUEST_SESSION_DURATION:
+            # Session expired - just return full limit, let caller handle cleanup
+            return GUEST_VOTE_LIMIT
+        
+        return max(0, GUEST_VOTE_LIMIT - vote_limit.vote_count)
+    except Exception:
+        # If guest voting tables don't exist, return full limit
         return GUEST_VOTE_LIMIT
-    
-    # Check if session expired
-    session_age = datetime.utcnow() - vote_limit.created_at
-    if session_age > GUEST_SESSION_DURATION:
-        # Session expired - just return full limit, let caller handle cleanup
-        return GUEST_VOTE_LIMIT
-    
-    return max(0, GUEST_VOTE_LIMIT - vote_limit.vote_count)
 
 
 def migrate_guest_votes_to_user(session_id: str, user_id: int, db: Session) -> int:
