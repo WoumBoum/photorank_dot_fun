@@ -150,6 +150,30 @@ def get_photo_pair_session(
         user_votes = db.query(Vote).join(Photo, (Vote.winner_id == Photo.id) | (Vote.loser_id == Photo.id))\
             .filter(Photo.category_id == selected_category_id, Vote.user_id == current_user.id).all()
         
+        # Calculate actual remaining Top 5 matches
+        next_top5_pairs = None
+        if len(all_photos) >= 5:
+            # Get current rankings for all photos in category
+            ranked_photos = db.query(Photo).filter(
+                Photo.category_id == selected_category_id
+            ).order_by(Photo.elo_rating.desc()).all()
+            
+            # Get top 5 photo IDs
+            top5_photos = [p.id for p in ranked_photos[:5]]
+            
+            # Calculate all possible Top 5 pairs (n choose 2 for top 5 photos)
+            total_top5_pairs = len(top5_photos) * (len(top5_photos) - 1) // 2
+            
+            # Count already voted Top 5 pairs
+            voted_top5_pairs = 0
+            for vote in user_votes:
+                if vote.winner_id in top5_photos and vote.loser_id in top5_photos:
+                    voted_top5_pairs += 1
+            
+            # Calculate remaining Top 5 pairs
+            remaining_top5_pairs = total_top5_pairs - voted_top5_pairs
+            next_top5_pairs = remaining_top5_pairs if remaining_top5_pairs > 0 else None
+        
         # Create set of already voted pairs (as sorted tuples to handle bidirectional votes)
         voted_pairs = set()
         for vote in user_votes:
@@ -178,30 +202,17 @@ def get_photo_pair_session(
         selected_pair = random.choice(available_pairs)
         photos = [db.query(Photo).filter(Photo.id == selected_pair[0]).first(),
                  db.query(Photo).filter(Photo.id == selected_pair[1]).first()]
-        
-    # Calculate progress
-    voted_pairs_count = len(voted_pairs)
-    progress_percentage = (voted_pairs_count / total_possible_pairs) * 100 if total_possible_pairs > 0 else 0
     
-    # Calculate excitement anticipation milestones
-    next_top5_pairs = None
-    next_top10_pairs = None
-    
-    if total_possible_pairs > 0 and voted_pairs_count is not None:
-        # Calculate intervals for evenly spaced excitement
-        top5_interval = max(1, total_possible_pairs // 10)  # Every 10% of total pairs
-        top10_interval = max(1, total_possible_pairs // 45)  # Every ~2.22% of total pairs
-        
-        # Calculate next milestone pairs
-        next_top5 = ((voted_pairs_count // top5_interval) + 1) * top5_interval
-        next_top10 = ((voted_pairs_count // top10_interval) + 1) * top10_interval
-        
-        next_top5_pairs = next_top5 - voted_pairs_count
-        next_top10_pairs = next_top10 - voted_pairs_count
     else:
         # For unauthenticated users, just return random pairs
         import random
         photos = random.sample(all_photos, 2)
+        next_top5_pairs = None
+        next_top10_pairs = None
+    
+    # Calculate progress
+    voted_pairs_count = len(voted_pairs)
+    progress_percentage = (voted_pairs_count / total_possible_pairs) * 100 if total_possible_pairs > 0 else 0
     
     # Add owner username and category info to each photo
     result = []

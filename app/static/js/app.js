@@ -325,21 +325,13 @@ class PhotoRankApp {
         }
         
         if (progressText && progressPercentage !== undefined) {
-            // Build anticipation text
+            // Build anticipation text - only show when very close (≤10 votes)
             let anticipationText = '';
             if (nextTop5Pairs !== null && nextTop5Pairs !== undefined) {
                 if (nextTop5Pairs === 0) {
                     anticipationText = 'TOP 5 MATCH! • ';
-                } else if (nextTop5Pairs <= 5) {
+                } else if (nextTop5Pairs <= 10) {
                     anticipationText = `TOP 5 IN ${nextTop5Pairs} • `;
-                }
-            }
-            
-            if (nextTop10Pairs !== null && nextTop10Pairs !== undefined && anticipationText === '') {
-                if (nextTop10Pairs === 0) {
-                    anticipationText = 'TOP 10 MATCH! • ';
-                } else if (nextTop10Pairs <= 3) {
-                    anticipationText = `TOP 10 IN ${nextTop10Pairs} • `;
                 }
             }
             
@@ -386,13 +378,7 @@ class PhotoRankApp {
             }
         }
         
-        // Add ticks at ~2.22% intervals (Top 10 milestones)
-        for (let i = 2.22; i < 100; i += 2.22) {
-            const tick = document.createElement('div');
-            tick.className = 'progress-tick top-10';
-            tick.style.left = `${i.toFixed(1)}%`;
-            progressBar.appendChild(tick);
-        }
+
     }
 
     showImportantMatchUI(matchType) {
