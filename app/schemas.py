@@ -90,7 +90,7 @@ class VoteCreate(BaseModel):
 
 class VoteOut(BaseModel):
     id: int
-    user_id: int
+    user_id: Optional[int]
     winner_id: int
     loser_id: int
     created_at: datetime
