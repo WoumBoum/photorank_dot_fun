@@ -299,6 +299,50 @@ docker compose -f docker-compose-dev.yml down && docker compose -f docker-compos
 ---
 **Remember**: This app is intentionally minimal. Every change should enhance the core experience without adding complexity. When in doubt, choose simplicity over features.
 
+## 🐍 **Python Version Management**
+
+### **Critical Information**
+- **Project requires Python 3.10+** (Dockerfile uses `python:3.10-slim`)
+- **Codebase uses Python 3.6+ features**: f-strings, type hints, async/await
+- **Alembic migrations are Python 3 compatible** - all files compile successfully
+- **DO NOT use Python 2.7** - will cause syntax errors and migration failures
+
+### **Quick Fixes for Python Version Issues**
+
+#### Option 1: Use Virtual Environment (Recommended)
+```bash
+cd /home/walid/Documents/PROJ/photorank_dot_fun
+. venv/bin/activate  # Uses Python 3.12.3
+python --version  # Should show Python 3.12.3
+```
+
+#### Option 2: Set pyenv to Python 3
+```bash
+# Global change (affects all projects)
+pyenv global 3.12.3
+
+# OR project-specific change
+cd /home/walid/Documents/PROJ/photorank_dot_fun
+pyenv local 3.12.3
+```
+
+#### Option 3: Use Docker (Most Reliable)
+```bash
+docker compose -f docker-compose-dev.yml up -d  # Uses Python 3.10 from Dockerfile
+```
+
+### **Verification**
+After switching to Python 3:
+```bash
+python --version  # Should show 3.10+ 
+python -c "import sys; print(sys.version_info >= (3, 10))"  # Should print True
+```
+
+### **Alembic Migration Notes**
+- All migrations work with Python 3.10+
+- Connection errors indicate database not running, not Python version issues
+- Run migrations only when database is available via Docker
+
 ## ✅ **Deployment Status**
 **Current Status**: ✅ **WORKING** - Successfully deployed and functional
 - **Database**: Complete schema with all tables (users, photos, votes, upload_limits, categories)
@@ -307,6 +351,6 @@ docker compose -f docker-compose-dev.yml down && docker compose -f docker-compos
 - **Rate Limiting**: 5 uploads per 24 hours enforced
 - **Known Issues**: Minimal - occasional 500 errors on categories endpoint resolved
 
-**Last Updated**: July 2025 by Agent Kimi - PhotoRank Creator
+**Last Updated**: August 2025 - Added Python version management guide
 **Major Updates**: Complete database setup fix, deployment stabilization, working production version
 **Deployment**: Render.com + Supabase PostgreSQL - Fully functional

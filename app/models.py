@@ -69,3 +69,26 @@ class UploadLimit(Base):
         "users.id", ondelete="CASCADE"), primary_key=True)
     upload_count = Column(Integer, nullable=False, default=0)
     last_upload_date = Column(DateTime, nullable=False, server_default=text('now()'))
+
+
+class GuestVote(Base):
+    __tablename__ = "guest_votes"
+    
+    id = Column(Integer, primary_key=True, nullable=False)
+    session_id = Column(String, nullable=False, index=True)
+    winner_id = Column(Integer, ForeignKey("photos.id", ondelete="CASCADE"), nullable=False)
+    loser_id = Column(Integer, ForeignKey("photos.id", ondelete="CASCADE"), nullable=False)
+    ip_hash = Column(String, nullable=True)
+    user_agent_hash = Column(String, nullable=True)
+    created_at = Column(TIMESTAMP(timezone=True),
+                        nullable=False, server_default=text('now()'))
+
+
+class GuestVoteLimit(Base):
+    __tablename__ = "guest_vote_limits"
+    
+    session_id = Column(String, primary_key=True, nullable=False)
+    vote_count = Column(Integer, nullable=False, default=0)
+    last_vote_date = Column(DateTime, nullable=False, server_default=text('now()'))
+    created_at = Column(TIMESTAMP(timezone=True),
+                        nullable=False, server_default=text('now()'))

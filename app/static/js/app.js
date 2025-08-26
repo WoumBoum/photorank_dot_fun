@@ -192,6 +192,10 @@ class PhotoRankApp {
         const path = window.location.pathname;
         if (path === '/' || /\/[^/]+\/vote$/.test(path)) {
             await this.loadPhotoPair();
+            // Show guest vote counter if not authenticated
+            if (!this.isAuthenticated()) {
+                await this.updateGuestVoteCounter();
+            }
         } else if (path === '/leaderboard' || /\/[^/]+\/leaderboard$/.test(path)) {
             // If URL is /{category}/leaderboard, prefer path-based API
             const m = path.match(/^\/([^/]+)\/leaderboard\/?$/);
@@ -476,7 +480,13 @@ class PhotoRankApp {
 
     async handleVote(event) {
         if (!this.currentPair) return;
-        if (!this.isAuthenticated()) { window.location.href = '/login'; return; }
+        
+        // Check authentication - if not authenticated, use guest voting
+        const isAuthenticated = this.isAuthenticated();
+        if (!isAuthenticated) {
+            await this.handleGuestVote(event);
+            return;
+        }
 
         // Block rapid double-submits
         if (this._voteInFlight || this._voteCooldown) return;
@@ -528,6 +538,219 @@ class PhotoRankApp {
             }
         } finally {
             this._voteInFlight = false;
+        }
+    }
+
+    async handleGuestVote(event) {
+        if (!this.currentPair) return;
+        if (this._voteInFlight || this._voteCooldown) return;
+        const nonceAtClick = this._pairNonce;
+        if (!this.currentPair || nonceAtClick !== this._pairNonce) return;
+        this._voteInFlight = true;
+
+        const clickedContainer = event.currentTarget;
+        const isFirst = clickedContainer.id === 'photo1';
+
+        const winner = isFirst ? this.currentPair[0] : this.currentPair[1];
+        const loser  = isFirst ? this.currentPair[1] : this.currentPair[0];
+
+        try {
+            if (!winner?.id || !loser?.id) return;
+
+            // Ensure we are still on the same pair when sending
+            if (nonceAtClick !== this._pairNonce) { this._voteInFlight = false; return; }
+
+            const response = await fetch('/api/votes/guest', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ winner_id: winner.id, loser_id: loser.id }),
+                credentials: 'include'  // Important for cookies
+            });
+
+            if (response.status === 429) {
+                // Guest vote limit reached
+                const errorData = await response.json();
+                this.showGuestLimitMessage(errorData.detail);
+                this._voteInFlight = false;
+                return;
+            }
+
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+
+            // Update guest vote counter
+            await this.updateGuestVoteCounter();
+
+            // Same UI handling as authenticated votes
+            const c1 = document.getElementById('photo1');
+            const c2 = document.getElementById('photo2');
+            if (c1) c1.style.pointerEvents = 'none';
+            if (c2) c2.style.pointerEvents = 'none';
+
+            const loserContainer = isFirst ? document.getElementById('photo2') : document.getElementById('photo1');
+            if (loserContainer) loserContainer.style.opacity = '0.3';
+
+            this._voteCooldown = true;
+            setTimeout(() => {
+                this.currentPair = null;
+                this.loadPhotoPair();
+                this._voteCooldown = false;
+                if (c1) c1.style.pointerEvents = '';
+                if (c2) c2.style.pointerEvents = '';
+            }, 250);
+
+        } catch (error) {
+            console.error('Error submitting guest vote:', error);
+            if (error.message.includes('429')) {
+                this.showGuestLimitMessage('Guest vote limit reached. Please sign up to continue voting.');
+            }
+        } finally {
+            this._voteInFlight = false;
+        }
+    }
+
+    async updateGuestVoteCounter() {
+        try {
+            const response = await fetch('/api/votes/guest/stats', {
+                credentials: 'include'
+            });
+            
+            if (response.ok) {
+                const stats = await response.json();
+                this.showGuestVoteCounter(stats.remaining_votes);
+            }
+        } catch (error) {
+            console.error('Error updating guest vote counter:', error);
+        }
+    }
+
+    showGuestVoteCounter(remainingVotes) {
+        // Create or update guest vote counter UI
+        let counterElement = document.getElementById('guest-vote-counter');
+        
+        if (!counterElement) {
+            counterElement = document.createElement('div');
+            counterElement.id = 'guest-vote-counter';
+            counterElement.className = 'guest-vote-counter';
+            counterElement.style.cssText = `
+                position: fixed;
+                bottom: 20px;
+                right: 20px;
+                background: #000;
+                color: #fff;
+                padding: 0.5rem 1rem;
+                border-radius: 4px;
+                font-family: 'Courier New', monospace;
+                font-size: 0.9rem;
+                z-index: 1000;
+                box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+            `;
+            
+            // Insert after the voting container or directly in body
+            const votingContainer = document.querySelector('.voting-container') || document.body;
+            votingContainer.appendChild(counterElement);
+        }
+        
+        counterElement.textContent = `Guest votes: ${remainingVotes}/10 remaining`;
+        
+        // Show signup prompt when running low
+        if (remainingVotes <= 3) {
+            this.showSignupPrompt(remainingVotes);
+        }
+    }
+
+    showGuestLimitMessage(message) {
+        // Remove any existing messages
+        this.removeGuestLimitMessage();
+        
+        const messageElement = document.createElement('div');
+        messageElement.id = 'guest-limit-message';
+        messageElement.className = 'guest-limit-message';
+        messageElement.style.cssText = `
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: #000;
+            color: #fff;
+            padding: 2rem;
+            border-radius: 8px;
+            text-align: center;
+            font-family: 'Courier New', monospace;
+            z-index: 1001;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+            max-width: 400px;
+            width: 90%;
+        `;
+        
+        messageElement.innerHTML = `
+            <h3 style="margin: 0 0 1rem 0;">${message}</h3>
+            <p style="margin: 0 0 1.5rem 0;">Sign up to continue voting and track your progress!</p>
+            <a href="/login" class="btn" style="display: inline-block; padding: 0.5rem 1.5rem;">Sign Up Now</a>
+        `;
+        
+        document.body.appendChild(messageElement);
+        
+        // Add overlay
+        const overlay = document.createElement('div');
+        overlay.id = 'guest-limit-overlay';
+        overlay.style.cssText = `
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.7);
+            z-index: 1000;
+        `;
+        document.body.appendChild(overlay);
+    }
+
+    removeGuestLimitMessage() {
+        const message = document.getElementById('guest-limit-message');
+        const overlay = document.getElementById('guest-limit-overlay');
+        
+        if (message) message.remove();
+        if (overlay) overlay.remove();
+    }
+
+    showSignupPrompt(remainingVotes) {
+        // Show subtle signup prompt when votes are running low
+        const promptElement = document.getElementById('guest-signup-prompt');
+        
+        if (!promptElement && remainingVotes > 0) {
+            const prompt = document.createElement('div');
+            prompt.id = 'guest-signup-prompt';
+            prompt.className = 'guest-signup-prompt';
+            prompt.style.cssText = `
+                position: fixed;
+                bottom: 70px;
+                right: 20px;
+                background: #000;
+                color: #fff;
+                padding: 0.75rem 1rem;
+                border-radius: 4px;
+                font-family: 'Courier New', monospace;
+                font-size: 0.8rem;
+                z-index: 999;
+                box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+                max-width: 250px;
+            `;
+            
+            prompt.innerHTML = `
+                Only ${remainingVotes} guest vote${remainingVotes > 1 ? 's' : ''} left! 
+                <a href="/login" style="color: #fff; text-decoration: underline; margin-left: 0.5rem;">Sign up</a>
+            `;
+            
+            document.body.appendChild(prompt);
+            
+            // Auto-dismiss after 10 seconds
+            setTimeout(() => {
+                if (prompt.parentNode) {
+                    prompt.remove();
+                }
+            }, 10000);
         }
     }
 

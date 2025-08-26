@@ -1,12 +1,14 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 from typing import Tuple
+from datetime import datetime
 
 from ..database import get_db
 from ..models import Vote, Photo, User
 from ..schemas import VoteCreate, VoteOut
 from ..oauth2 import get_current_user
+from ..guest_utils import get_guest_session_id, get_client_info, can_guest_vote, record_guest_vote, get_remaining_guest_votes
 
 router = APIRouter(prefix="/votes", tags=['Votes'])
 
@@ -104,4 +106,76 @@ def get_vote_stats(
     
     return {
         "total_votes": total_votes
+    }
+
+
+@router.post("/guest", response_model=VoteOut)
+def create_guest_vote(
+    vote: VoteCreate,
+    request: Request,
+    db: Session = Depends(get_db)
+):
+    """Submit a vote as a guest user"""
+    # Check if photos exist
+    winner = db.query(Photo).filter(Photo.id == vote.winner_id).first()
+    loser = db.query(Photo).filter(Photo.id == vote.loser_id).first()
+    
+    if not winner or not loser:
+        raise HTTPException(status_code=404, detail="Photo not found")
+    
+    if winner.id == loser.id:
+        raise HTTPException(status_code=400, detail="Cannot vote for same photo")
+    
+    # Get guest session and check rate limits
+    session_id = get_guest_session_id(request)
+    ip_hash, user_agent_hash = get_client_info(request)
+    
+    if not can_guest_vote(session_id, db):
+        raise HTTPException(
+            status_code=429, 
+            detail="Guest vote limit reached. Please sign up to continue voting."
+        )
+    
+    # Calculate ELO changes (same logic as authenticated votes)
+    winner_change, loser_change = calculate_elo_change(
+        winner.elo_rating, 
+        loser.elo_rating
+    )
+    
+    # Update ratings
+    winner.elo_rating += winner_change
+    loser.elo_rating += loser_change
+    
+    # Update duel counts
+    winner.total_duels += 1
+    loser.total_duels += 1
+    winner.wins += 1
+    
+    # Record guest vote
+    record_guest_vote(session_id, vote.winner_id, vote.loser_id, 
+                     ip_hash, user_agent_hash, db)
+    
+    # Create response (without user_id since it's a guest vote)
+    return VoteOut(
+        id=0,  # Guest votes don't have persistent IDs
+        user_id=None,
+        winner_id=vote.winner_id,
+        loser_id=vote.loser_id,
+        created_at=datetime.utcnow()
+    )
+
+
+@router.get("/guest/stats")
+def get_guest_vote_stats(
+    request: Request,
+    db: Session = Depends(get_db)
+):
+    """Get guest voting statistics"""
+    session_id = get_guest_session_id(request)
+    remaining_votes = get_remaining_guest_votes(session_id, db)
+    
+    return {
+        "remaining_votes": remaining_votes,
+        "total_limit": 10,
+        "session_id": session_id
     }

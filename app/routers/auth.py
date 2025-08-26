@@ -198,3 +198,21 @@ def get_current_user_info(current_user: User = Depends(get_current_user)):
 def logout():
     """Logout endpoint (client-side token removal)"""
     return {"message": "Logged out successfully"}
+
+
+@router.post("/migrate-guest-votes")
+def migrate_guest_votes(
+    request: Request,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Migrate guest votes to user account after signup"""
+    from ..guest_utils import get_guest_session_id, migrate_guest_votes_to_user
+    
+    session_id = get_guest_session_id(request)
+    migrated_count = migrate_guest_votes_to_user(session_id, current_user.id, db)
+    
+    return {
+        "message": f"Successfully migrated {migrated_count} guest votes to your account",
+        "migrated_count": migrated_count
+    }
