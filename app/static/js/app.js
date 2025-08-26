@@ -329,10 +329,13 @@ class PhotoRankApp {
         if (progressText && progressPercentage !== undefined) {
             // Build anticipation text for important matches
             let anticipationText = '';
-            if (votesUntilImportant !== null && votesUntilImportant !== undefined) {
+            if (isImportantMatch === true) {
+                // On the actual important match, show banner text only (no countdown)
+                anticipationText = 'IMPORTANT MATCH! • ';
+            } else if (votesUntilImportant !== null && votesUntilImportant !== undefined) {
                 if (votesUntilImportant === 1) {
-                    anticipationText = 'IMPORTANT MATCH! • ';
-                } else if (votesUntilImportant <= 5) {
+                    anticipationText = 'IMPORTANT MATCH NEXT • ';
+                } else if (votesUntilImportant > 1 && votesUntilImportant <= 5) {
                     anticipationText = `IMPORTANT MATCH IN ${votesUntilImportant} VOTES • `;
                 }
             }
