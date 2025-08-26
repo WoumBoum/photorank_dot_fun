@@ -3,10 +3,10 @@ from starlette.responses import Response, JSONResponse
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 from typing import Tuple
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from ..database import get_db
-from ..models import Vote, Photo, User
+from ..models import Vote, Photo, User, GuestVote, GuestVoteLimit
 from ..schemas import VoteCreate, VoteOut
 from ..oauth2 import get_current_user
 from ..guest_utils import get_guest_session_id, get_client_info, can_guest_vote, record_guest_vote, get_remaining_guest_votes
@@ -132,7 +132,20 @@ def create_guest_vote(
     session_id = get_guest_session_id(request)
     ip_hash, user_agent_hash = get_client_info(request)
     
-    if not can_guest_vote(session_id, db):
+    # Check for expired session and cleanup if needed
+    vote_limit = db.query(GuestVoteLimit).filter(
+        GuestVoteLimit.session_id == session_id
+    ).first()
+    
+    if vote_limit:
+        session_age = datetime.utcnow() - vote_limit.created_at
+        if session_age > timedelta(hours=24):
+            # Clean up expired session
+            db.query(GuestVote).filter(GuestVote.session_id == session_id).delete()
+            db.query(GuestVoteLimit).filter(GuestVoteLimit.session_id == session_id).delete()
+            vote_limit = None
+    
+    if vote_limit and vote_limit.vote_count >= 10:
         raise HTTPException(
             status_code=429, 
             detail="Guest vote limit reached. Please sign up to continue voting."
@@ -156,6 +169,9 @@ def create_guest_vote(
     # Record guest vote
     record_guest_vote(session_id, vote.winner_id, vote.loser_id, 
                      ip_hash, user_agent_hash, db)
+    
+    # Commit all changes
+    db.commit()
     
     # Create response payload (without user_id since it's a guest vote)
     payload = VoteOut(

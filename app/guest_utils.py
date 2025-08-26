@@ -73,9 +73,7 @@ def can_guest_vote(session_id: str, db: Session) -> bool:
     # Check if session is expired (24 hours)
     session_age = datetime.utcnow() - vote_limit.created_at
     if session_age > GUEST_SESSION_DURATION:
-        # Reset expired session
-        db.delete(vote_limit)
-        db.commit()
+        # Reset expired session - just return True, let caller handle cleanup
         return True
     
     # Check vote count
@@ -84,7 +82,7 @@ def can_guest_vote(session_id: str, db: Session) -> bool:
 
 def record_guest_vote(session_id: str, winner_id: int, loser_id: int, 
                      ip_hash: str, user_agent_hash: str, db: Session) -> None:
-    """Record a guest vote and update rate limits"""
+    """Record a guest vote and update rate limits - caller must commit"""
     # Create guest vote record
     guest_vote = GuestVote(
         session_id=session_id,
@@ -109,8 +107,6 @@ def record_guest_vote(session_id: str, winner_id: int, loser_id: int,
             vote_count=1
         )
         db.add(vote_limit)
-    
-    db.commit()
 
 
 def get_remaining_guest_votes(session_id: str, db: Session) -> int:
@@ -125,8 +121,7 @@ def get_remaining_guest_votes(session_id: str, db: Session) -> int:
     # Check if session expired
     session_age = datetime.utcnow() - vote_limit.created_at
     if session_age > GUEST_SESSION_DURATION:
-        db.delete(vote_limit)
-        db.commit()
+        # Session expired - just return full limit, let caller handle cleanup
         return GUEST_VOTE_LIMIT
     
     return max(0, GUEST_VOTE_LIMIT - vote_limit.vote_count)
