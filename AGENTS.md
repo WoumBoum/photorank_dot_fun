@@ -208,6 +208,30 @@ alembic revision --autogenerate -m "description"
 alembic upgrade head
 ```
 
+### 🔧 DB & Alembic State (Important)
+- Production DB: Supabase; App host: Render. Use DATABASE_URL from photorank.env (Render dashboard) when running migrations.
+- Always create a migration when models change. Prefer adding NOT NULL columns with a server_default, then drop the default.
+- If Alembic shows multiple heads, create a merge revision to unify them.
+- Avoid stray "Revises:" lines in migration docstrings; rely on the identifiers block (revision, down_revision).
+
+#### If DB history diverges (unknown/missing revision errors)
+Option A (preferred if schema already matches repo):
+1) Identify a repo revision that matches current schema (anchor).
+2) Stamp without schema changes: `alembic stamp <anchor>`
+3) Apply new migrations: `alembic upgrade head`
+
+Option B (hotfix):
+1) Apply required SQL manually (e.g., `ALTER TABLE ...`).
+2) Stamp to the repo migration that would have applied it: `alembic stamp <revision>`
+
+#### Example – users.total_votes
+- Column added via SQL: `ALTER TABLE users ADD COLUMN IF NOT EXISTS total_votes integer NOT NULL DEFAULT 0;`
+- Repo migration: `00f6bcbb60fc_add_users_total_votes_column.py`
+- Stamped DB to `00f6bcbb60fc` for future upgrades.
+- Code resiliency:
+  - votes.py: persist counter and guard None
+  - photos.py: guard None before modulo
+
 ### Production DB note: boosted_votes
 The `boosted_votes` column on `categories` was created manually on Supabase and then stamped in Alembic to keep history aligned.
 

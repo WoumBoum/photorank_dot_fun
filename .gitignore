@@ -1,7 +1,9 @@
 __pycache__
+.venv/
 venv/
 .env
 .env.*
+photorank.env
 !.env.example
 *.pyc
 opencodetmp/

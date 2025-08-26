@@ -224,7 +224,8 @@ def get_photo_pair_session(
     
     if current_user and photos and len(photos) == 2:
         important_match_interval = 20
-        votes_until_important = important_match_interval - (current_user.total_votes % important_match_interval)
+        tv = (current_user.total_votes or 0)
+        votes_until_important = important_match_interval - (tv % important_match_interval)
         
         # Check if this is an important match
         if votes_until_important == 1:

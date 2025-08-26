@@ -67,7 +67,12 @@ def create_vote(
     winner.wins += 1
     
     # Update user's total votes count
-    current_user.total_votes += 1
+    try:
+        current_user.total_votes = (current_user.total_votes or 0) + 1
+        db.add(current_user)
+    except Exception:
+        # Be resilient: do not block vote creation if counter update fails
+        pass
     
     # Create vote record
     new_vote = Vote(

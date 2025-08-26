@@ -1,7 +1,7 @@
 """add question and owner to categories
 
 Revision ID: abcd
-Revises: dd bbc1ddcf58_merge_heads
+Revises: ddbbc1ddcf58
 Create Date: 2025-08-13
 """
 from alembic import op
@@ -11,7 +11,7 @@ from sqlalchemy import Integer, String, Text
 
 # revision identifiers, used by Alembic.
 revision = 'abcd'
-down_revision = None
+down_revision = 'ddbbc1ddcf58'
 branch_labels = None
 depends_on = None
 
