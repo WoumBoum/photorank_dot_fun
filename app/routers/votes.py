@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Request, Response, JSONResponse
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 from typing import Tuple
@@ -116,6 +116,8 @@ def create_guest_vote(
     db: Session = Depends(get_db)
 ):
     """Submit a vote as a guest user"""
+    from fastapi import Response
+
     # Check if photos exist
     winner = db.query(Photo).filter(Photo.id == vote.winner_id).first()
     loser = db.query(Photo).filter(Photo.id == vote.loser_id).first()
@@ -127,6 +129,7 @@ def create_guest_vote(
         raise HTTPException(status_code=400, detail="Cannot vote for same photo")
     
     # Get guest session and check rate limits
+    original_cookie = request.cookies.get("guest_session")
     session_id = get_guest_session_id(request)
     ip_hash, user_agent_hash = get_client_info(request)
     
@@ -155,14 +158,30 @@ def create_guest_vote(
     record_guest_vote(session_id, vote.winner_id, vote.loser_id, 
                      ip_hash, user_agent_hash, db)
     
-    # Create response (without user_id since it's a guest vote)
-    return VoteOut(
-        id=0,  # Guest votes don't have persistent IDs
+    # Build response and set cookie if newly created
+    resp = Response()
+    if not original_cookie or original_cookie != session_id:
+        # 24h, Lax to allow same-site nav, secure recommended in prod
+        resp.set_cookie(
+            key="guest_session",
+            value=session_id,
+            max_age=24*60*60,
+            httponly=False,
+            samesite="Lax"
+        )
+    
+    # Create response payload (without user_id since it's a guest vote)
+    from fastapi.encoders import jsonable_encoder
+    payload = jsonable_encoder(VoteOut(
+        id=0,
         user_id=None,
         winner_id=vote.winner_id,
         loser_id=vote.loser_id,
         created_at=datetime.utcnow()
-    )
+    ))
+    resp.media_type = "application/json"
+    resp.body = bytes(jsonable_encoder(payload).__str__(), 'utf-8')
+    return resp
 
 
 @router.get("/guest/stats")
@@ -171,11 +190,24 @@ def get_guest_vote_stats(
     db: Session = Depends(get_db)
 ):
     """Get guest voting statistics"""
+    from fastapi import JSONResponse
+
+    original_cookie = request.cookies.get("guest_session")
     session_id = get_guest_session_id(request)
     remaining_votes = get_remaining_guest_votes(session_id, db)
-    
-    return {
+
+    payload = {
         "remaining_votes": remaining_votes,
         "total_limit": 10,
         "session_id": session_id
     }
+    resp = JSONResponse(content=payload)
+    if not original_cookie or original_cookie != session_id:
+        resp.set_cookie(
+            key="guest_session",
+            value=session_id,
+            max_age=24*60*60,
+            httponly=False,
+            samesite="Lax"
+        )
+    return resp
