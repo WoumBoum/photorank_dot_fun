@@ -4,6 +4,9 @@ class PhotoRankApp {
     constructor() {
         this.ws = null;
         this.currentPair = null;
+        // Prevent rapid double-submits
+        this._voteInFlight = false;
+        this._voteCooldown = false;
         this.init();
     }
 
@@ -471,45 +474,52 @@ class PhotoRankApp {
 
     async handleVote(event) {
         if (!this.currentPair) return;
+        if (!this.isAuthenticated()) { window.location.href = '/login'; return; }
 
-        if (!this.isAuthenticated()) {
-            window.location.href = '/login';
-            return;
-        }
+        // Block rapid double-submits
+        if (this._voteInFlight || this._voteCooldown) return;
+        this._voteInFlight = true;
 
         const clickedContainer = event.currentTarget;
         const isFirst = clickedContainer.id === 'photo1';
 
         const winner = isFirst ? this.currentPair[0] : this.currentPair[1];
-        const loser = isFirst ? this.currentPair[1] : this.currentPair[0];
+        const loser  = isFirst ? this.currentPair[1] : this.currentPair[0];
 
         try {
+            if (!winner?.id || !loser?.id) return;
+
             await this.makeAuthenticatedRequest('/api/votes', {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    winner_id: winner.id,
-                    loser_id: loser.id
-                })
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ winner_id: winner.id, loser_id: loser.id })
             });
 
+            // Temporarily disable pointer events on containers during transition
+            const c1 = document.getElementById('photo1');
+            const c2 = document.getElementById('photo2');
+            if (c1) c1.style.pointerEvents = 'none';
+            if (c2) c2.style.pointerEvents = 'none';
+
             // Fade out loser
-            const loserContainer = isFirst ?
-                document.getElementById('photo2') :
-                document.getElementById('photo1');
+            const loserContainer = isFirst ? document.getElementById('photo2') : document.getElementById('photo1');
+            if (loserContainer) loserContainer.style.opacity = '0.3';
 
-            loserContainer.style.opacity = '0.3';
-
+            // Short cooldown to avoid extra clicks during animation
+            this._voteCooldown = true;
             setTimeout(() => {
                 this.loadPhotoPair();
+                this._voteCooldown = false;
+                if (c1) c1.style.pointerEvents = '';
+                if (c2) c2.style.pointerEvents = '';
             }, 250);
 
         } catch (error) {
             if (error.message !== 'Authentication required') {
                 console.error('Error submitting vote:', error);
             }
+        } finally {
+            this._voteInFlight = false;
         }
     }
 
