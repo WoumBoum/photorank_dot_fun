@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, Query, Request
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, Request
 from fastapi.responses import RedirectResponse
 from sqlalchemy.orm import Session
 from sqlalchemy import func
@@ -199,9 +199,10 @@ def get_photo_pair_session(
                 Photo.category_id == selected_category_id
             ).order_by(Photo.elo_rating.desc()).all()
             
-            # Try to find the best available pair from top-ranked photos
-            # Start with #1 vs #2, then #1 vs #3, #2 vs #3, etc.
-            max_rank_to_check = min(10, len(ranked_photos))  # Check top 10 photos
+            # Improved algorithm: Find pairs that are both highly ranked AND have similar ELO ratings
+            # Prioritize pairs where both photos are in top ranks and have small ELO difference
+            candidate_pairs = []
+            max_rank_to_check = min(15, len(ranked_photos))  # Check more photos for better matches
             
             for i in range(max_rank_to_check):
                 for j in range(i + 1, max_rank_to_check):
@@ -209,11 +210,23 @@ def get_photo_pair_session(
                         photo1 = ranked_photos[i]
                         photo2 = ranked_photos[j]
                         pair = tuple(sorted([photo1.id, photo2.id]))
+                        
                         if pair in available_pairs:
-                            selected_pair = pair
-                            break
-                if selected_pair:
-                    break
+                            # Calculate quality score: higher rank + smaller ELO difference = better
+                            rank_score = (max_rank_to_check - i) + (max_rank_to_check - j)  # Higher rank = better
+                            elo_diff = abs(photo1.elo_rating - photo2.elo_rating)
+                            similarity_score = 100.0 / (1.0 + elo_diff)  # Smaller difference = better
+                            
+                            # Combined score favors high-ranked, similar ELO pairs
+                            total_score = rank_score * similarity_score
+                            
+                            candidate_pairs.append((total_score, pair))
+            
+            # Sort candidate pairs by quality score (highest first)
+            if candidate_pairs:
+                candidate_pairs.sort(key=lambda x: x[0], reverse=True)
+                selected_pair = candidate_pairs[0][1]
+                print(f"IMPORTANT MATCH: Selected high-quality pair {selected_pair} with score {candidate_pairs[0][0]:.2f}")
         
         # If not an important match or no top pairs available, select randomly
         if not selected_pair:
