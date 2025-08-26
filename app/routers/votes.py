@@ -136,14 +136,16 @@ def create_guest_vote(
         original_cookie = request.cookies.get("guest_session")
         session_id = get_guest_session_id(request)
         ip_hash, user_agent_hash = get_client_info(request)
-        print(f"[GUEST_VOTE] Session: {session_id}, cookie_present={original_cookie is not None}")
-        
+
+        # Initialize vote_count for fallback
+        vote_count = 0
+
         # Check for expired session and cleanup if needed
         try:
             vote_limit = db.query(GuestVoteLimit).filter(
                 GuestVoteLimit.session_id == session_id
             ).first()
-            
+
             if vote_limit:
                 session_age = datetime.utcnow() - vote_limit.created_at
                 if session_age > timedelta(hours=24):
@@ -151,17 +153,31 @@ def create_guest_vote(
                     db.query(GuestVote).filter(GuestVote.session_id == session_id).delete()
                     db.query(GuestVoteLimit).filter(GuestVoteLimit.session_id == session_id).delete()
                     vote_limit = None
-            
+
             if vote_limit and vote_limit.vote_count >= 10:
                 raise HTTPException(
-                    status_code=429, 
+                    status_code=429,
                     detail="Guest vote limit reached. Please sign up to continue voting."
                 )
         except Exception as e:
-            # If guest voting tables don't exist, fall back to allowing votes
-            # This prevents 500 errors when tables are missing
+            # If guest voting tables don't exist, use cookie-based rate limiting as fallback
             print(f"Guest voting tables may not exist: {e}")
-            # Continue with the vote - this allows the system to work even if guest tables are missing
+            print(f"[GUEST_VOTE] Using cookie-based rate limiting for session: {session_id}")
+
+            # Fallback: Use cookie to track votes (limited to current session)
+            vote_count_cookie = request.cookies.get("guest_vote_count", "0")
+            try:
+                vote_count = int(vote_count_cookie)
+            except ValueError:
+                vote_count = 0
+
+            if vote_count >= 10:
+                raise HTTPException(
+                    status_code=429,
+                    detail="Guest vote limit reached. Please sign up to continue voting."
+                )
+
+            # Will increment after successful vote
         
         # Calculate ELO changes (same logic as authenticated votes)
         print(f"[GUEST_VOTE] Calculating ELO: winner_rating={winner.elo_rating}, loser_rating={loser.elo_rating}")
@@ -184,11 +200,14 @@ def create_guest_vote(
         
         # Record guest vote if tables exist
         try:
-            record_guest_vote(session_id, vote.winner_id, vote.loser_id, 
-                            ip_hash, user_agent_hash, db)
+            record_guest_vote(session_id, vote.winner_id, vote.loser_id,
+                             ip_hash, user_agent_hash, db)
         except Exception as e:
             print(f"Failed to record guest vote (tables may not exist): {e}")
-            # Continue even if guest vote recording fails
+            # Fallback: Increment cookie-based vote count
+            new_vote_count = vote_count + 1
+            print(f"[GUEST_VOTE] Incrementing cookie vote count to: {new_vote_count}")
+            # Will set in response cookie below
         
         # Commit all changes
         try:
@@ -226,6 +245,20 @@ def create_guest_vote(
                 samesite="Lax"
             )
 
+        # Always set/update vote count cookie for client-side tracking
+        try:
+            current_count = int(request.cookies.get("guest_vote_count", "0"))
+        except ValueError:
+            current_count = 0
+        new_count = current_count + 1
+        resp.set_cookie(
+            key="guest_vote_count",
+            value=str(new_count),
+            max_age=24*60*60,
+            httponly=False,
+            samesite="Lax"
+        )
+
         return resp
     
     except HTTPException:
@@ -261,9 +294,19 @@ def get_guest_vote_stats(
             remaining_votes = get_remaining_guest_votes(session_id, db)
             print(f"[GUEST_STATS] Remaining votes: {remaining_votes}")
         except Exception as e:
-            # If guest voting tables don't exist, return full limit
+            # If guest voting tables don't exist, use cookie-based calculation
             print(f"[GUEST_STATS] Guest voting tables may not exist: {e}")
-            remaining_votes = 10  # Default limit
+            print(f"[GUEST_STATS] Using cookie-based calculation for session: {session_id}")
+
+            # Fallback: Calculate from cookie
+            vote_count_cookie = request.cookies.get("guest_vote_count", "0")
+            try:
+                used_votes = int(vote_count_cookie)
+            except ValueError:
+                used_votes = 0
+
+            remaining_votes = max(0, 10 - used_votes)
+            print(f"[GUEST_STATS] Cookie-based remaining votes: {remaining_votes}")
 
         payload = {
             "remaining_votes": remaining_votes,
