@@ -348,7 +348,7 @@ class PhotoRankApp {
             
             progressContainer.innerHTML = progressBarHTML;
             
-            // Add ticks for important match milestones aligned to server signal
+            // Add ticks for important match milestones
             this.addImportantMatchTicks(progressContainer, votesUntilImportant);
         } else {
             progressContainer.innerHTML = '';
@@ -358,50 +358,34 @@ class PhotoRankApp {
     addImportantMatchTicks(progressContainer, votesUntilImportant) {
         if (votesUntilImportant === null || votesUntilImportant === undefined) return;
         const progressBar = progressContainer.querySelector('.progress-bar');
-        const fill = progressContainer.querySelector('.progress-fill');
-        if (!progressBar || !fill) return;
+        if (!progressBar) return;
 
-        // Clear old ticks
-        progressBar.querySelectorAll('.progress-tick, .progress-tick-label').forEach(n => n.remove());
+        // Parse total_possible_pairs from the progress text "a/b pairs"
+        const header = progressContainer.querySelector('.progress-text');
+        if (!header) return;
+        const match = header.textContent.match(/Progress:\s*(\d+)\s*\/\s*(\d+)\s*pairs/i);
+        if (!match) return;
+        const totalPairs = parseInt(match[2], 10);
+        if (!totalPairs || totalPairs < 20) return; // no ticks if less than one interval
 
-        // Server defines important matches every N votes based on user's total_votes
-        const importantMatchInterval = 20;
+        const importantMatchInterval = 20; // every 20 votes is important
 
-        // Derive current progress percent (0..100) from fill width style
-        const widthStr = fill.style.width || '0%';
-        const currentPercent = parseFloat(widthStr.replace('%', '')) || 0;
-
-        // We only know relative position within the current completion cycle.
-        // Place the next important-match tick at the moment it will trigger: when votes_until_important == 1
-        // That corresponds to the next vote, so show a single tick at currentPercent + minimal offset.
-        // Additionally, for visual guidance, show ticks at subsequent intervals ahead if space allows.
-
-        // Helper to add a tick at a given percent (clamped)
-        const addTickAt = (pct, labelText = null) => {
-            const p = Math.max(0, Math.min(100, pct));
+        // Build vote milestones: 20, 40, 60, ... up to totalPairs (caps at totalPairs)
+        for (let v = importantMatchInterval; v <= totalPairs; v += importantMatchInterval) {
+            const percent = Math.min(100, (v / totalPairs) * 100);
             const tick = document.createElement('div');
             tick.className = 'progress-tick important-match';
-            tick.style.left = `${p}%`;
+            tick.style.left = `${percent}%`;
             progressBar.appendChild(tick);
-            if (labelText) {
+
+            // Add label each 40 votes for readability
+            if (v % 40 === 0) {
                 const label = document.createElement('div');
                 label.className = 'progress-tick-label';
-                label.style.left = `${p}%`;
-                label.textContent = labelText;
+                label.style.left = `${percent}%`;
+                label.textContent = `${v} votes`;
                 progressBar.appendChild(label);
             }
-        };
-
-        // Next important match will occur after (votes_until_important - 1) more votes, but the bar is pairs-progress based.
-        // Without absolute counts, align tick to the immediate next action: a small marker at current percent.
-        // Nudge slightly ahead to avoid overlapping the fill edge.
-        const nextTickPercent = Math.min(100, currentPercent + 0.5);
-        addTickAt(nextTickPercent);
-
-        // Also hint future cycles every interval ahead (if any room remains)
-        for (let step = 1; step <= 3; step++) {
-            const futurePct = currentPercent + step * (100 / importantMatchInterval);
-            if (futurePct <= 100) addTickAt(futurePct);
         }
     }
 

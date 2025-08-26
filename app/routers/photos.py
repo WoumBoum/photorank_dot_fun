@@ -128,6 +128,7 @@ def get_photo_pair_session(
 ):
     """Get two random photos for voting using session-based category, excluding already voted pairs"""
     selected_category_id = request.session.get("selected_category_id")
+    is_important_match = False
     
     if not selected_category_id:
         raise HTTPException(status_code=400, detail="No category selected")
@@ -151,6 +152,12 @@ def get_photo_pair_session(
         # Get all votes by this user in this category
         user_votes = db.query(Vote).join(Photo, (Vote.winner_id == Photo.id) | (Vote.loser_id == Photo.id))\
             .filter(Photo.category_id == selected_category_id, Vote.user_id == current_user.id).all()
+        
+        # Check if this should be an important match
+        important_match_interval = 20
+        tv = (current_user.total_votes or 0)
+        next_vote_number = tv + 1
+        is_important_match = next_vote_number % important_match_interval == 0
         
         # Important match tracking will be implemented separately
         next_top5_pairs = None
@@ -178,9 +185,40 @@ def get_photo_pair_session(
         if not available_pairs:
             raise HTTPException(status_code=410, detail="No more photo pairs to vote on in this category")
         
-        # Randomly select one of the available pairs
-        import random
-        selected_pair = random.choice(available_pairs)
+        # Check if this should be an important match
+        important_match_interval = 20
+        tv = (current_user.total_votes or 0)
+        next_vote_number = tv + 1
+        is_important_match = next_vote_number % important_match_interval == 0
+        
+        # For important matches, select from top-ranked pairs that haven't been voted on
+        selected_pair = None
+        if is_important_match:
+            # Get all photos ranked by ELO
+            ranked_photos = db.query(Photo).filter(
+                Photo.category_id == selected_category_id
+            ).order_by(Photo.elo_rating.desc()).all()
+            
+            # Try to find the best available pair from top-ranked photos
+            # Start with #1 vs #2, then #1 vs #3, #2 vs #3, etc.
+            max_rank_to_check = min(10, len(ranked_photos))  # Check top 10 photos
+            
+            for i in range(max_rank_to_check):
+                for j in range(i + 1, max_rank_to_check):
+                    if i < len(ranked_photos) and j < len(ranked_photos):
+                        photo1 = ranked_photos[i]
+                        photo2 = ranked_photos[j]
+                        pair = tuple(sorted([photo1.id, photo2.id]))
+                        if pair in available_pairs:
+                            selected_pair = pair
+                            break
+                if selected_pair:
+                    break
+        
+        # If not an important match or no top pairs available, select randomly
+        if not selected_pair:
+            import random
+            selected_pair = random.choice(available_pairs)
         photos = [db.query(Photo).filter(Photo.id == selected_pair[0]).first(),
                  db.query(Photo).filter(Photo.id == selected_pair[1]).first()]
     
@@ -216,21 +254,26 @@ def get_photo_pair_session(
         )
         result.append(photo_out)
     
-    # Important match detection
+    # Important match detection - now handled earlier in the function
     votes_until_important = None
-    is_important_match = False
     photo1_rank = None
     photo2_rank = None
     
     if current_user and photos and len(photos) == 2:
+        # Use the same important_match_interval and tv from earlier
         important_match_interval = 20
         tv = (current_user.total_votes or 0)
-        votes_until_important = important_match_interval - (tv % important_match_interval)
+        next_vote_number = tv + 1
         
-        # Check if this is an important match
-        if votes_until_important == 1:
-            is_important_match = True
-            
+        # Fix timing: check if the NEXT vote will be an important match
+        # Important matches occur at votes 20, 40, 60, 80, 100, etc.
+        # So we check if (current_votes + 1) % important_match_interval == 0
+        votes_until_important = important_match_interval - (next_vote_number % important_match_interval)
+        if votes_until_important == important_match_interval:
+            votes_until_important = 0  # Exactly at the interval
+        
+        # Get ranks for important matches
+        if is_important_match:
             # Get current rankings for all photos in category
             ranked_photos = db.query(Photo).filter(
                 Photo.category_id == selected_category_id
