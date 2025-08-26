@@ -117,8 +117,6 @@ def create_guest_vote(
     db: Session = Depends(get_db)
 ):
     """Submit a vote as a guest user"""
-    from starlette.responses import Response
-
     # Check if photos exist
     winner = db.query(Photo).filter(Photo.id == vote.winner_id).first()
     loser = db.query(Photo).filter(Photo.id == vote.loser_id).first()
@@ -159,8 +157,17 @@ def create_guest_vote(
     record_guest_vote(session_id, vote.winner_id, vote.loser_id, 
                      ip_hash, user_agent_hash, db)
     
-    # Build response and set cookie if newly created
-    resp = Response()
+    # Create response payload (without user_id since it's a guest vote)
+    payload = VoteOut(
+        id=0,
+        user_id=None,
+        winner_id=vote.winner_id,
+        loser_id=vote.loser_id,
+        created_at=datetime.utcnow()
+    )
+    
+    # Build JSONResponse and set cookie if newly created
+    resp = JSONResponse(content=payload.dict())
     if not original_cookie or original_cookie != session_id:
         # 24h, Lax to allow same-site nav, secure recommended in prod
         resp.set_cookie(
@@ -171,17 +178,6 @@ def create_guest_vote(
             samesite="Lax"
         )
     
-    # Create response payload (without user_id since it's a guest vote)
-    from fastapi.encoders import jsonable_encoder
-    payload = jsonable_encoder(VoteOut(
-        id=0,
-        user_id=None,
-        winner_id=vote.winner_id,
-        loser_id=vote.loser_id,
-        created_at=datetime.utcnow()
-    ))
-    resp.media_type = "application/json"
-    resp.body = bytes(jsonable_encoder(payload).__str__(), 'utf-8')
     return resp
 
 
@@ -191,8 +187,6 @@ def get_guest_vote_stats(
     db: Session = Depends(get_db)
 ):
     """Get guest voting statistics"""
-    from fastapi import JSONResponse
-
     original_cookie = request.cookies.get("guest_session")
     session_id = get_guest_session_id(request)
     remaining_votes = get_remaining_guest_votes(session_id, db)
