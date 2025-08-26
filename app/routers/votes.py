@@ -289,8 +289,18 @@ def get_guest_vote_stats(
             print(f"[GUEST_STATS][FALLBACK] Backend unavailable while fetching remaining votes: {type(e).__name__}: {e}")
             remaining_votes = 0  # No votes available if backend is unavailable
 
-        # Attach reason for observability
-        reason = "limit_exhausted" if remaining_votes == 0 else "ok"
+        # Attach reason for observability based on raw_count if available
+        try:
+            raw = db.query(GuestVoteLimit).filter(GuestVoteLimit.session_id == session_id).first()
+            raw_count = raw.vote_count if raw else None
+        except Exception:
+            raw_count = None
+        if raw_count is None:
+            reason = "no_session"
+        elif raw_count >= 10:
+            reason = "limit_exhausted"
+        else:
+            reason = "ok"
         payload = {
             "remaining_votes": remaining_votes,
             "total_limit": 10,
