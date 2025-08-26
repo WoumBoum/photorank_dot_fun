@@ -165,9 +165,8 @@ def create_guest_vote(
                     detail="Guest vote limit reached. Please sign up to continue voting."
                 )
         except Exception as e:
-            # If guest voting tables don't exist, don't allow voting
-            # This prevents infinite guest voting when tables are missing
-            print(f"Guest voting tables may not exist: {e}")
+            # Distinguish between rate-limit exhaustion and backend issues
+            print(f"[GUEST_VOTE][ERROR] Guest voting backend unavailable: {type(e).__name__}: {e}")
             raise HTTPException(
                 status_code=500,
                 detail="Guest voting system not available. Please try again later or sign up."
@@ -271,9 +270,9 @@ def get_guest_vote_stats(
             remaining_votes = get_remaining_guest_votes(session_id, db)
             print(f"[GUEST_STATS] Remaining votes: {remaining_votes}")
         except Exception as e:
-            # If guest voting tables don't exist, return 0 to indicate voting not available
-            print(f"[GUEST_STATS] Guest voting tables may not exist: {e}")
-            remaining_votes = 0  # No votes available if tables don't exist
+            # Backend issue fetching remaining votes
+            print(f"[GUEST_STATS][ERROR] Backend unavailable while fetching remaining votes: {type(e).__name__}: {e}")
+            remaining_votes = 0  # No votes available if backend is unavailable
 
         payload = {
             "remaining_votes": remaining_votes,
