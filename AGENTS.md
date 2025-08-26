@@ -117,22 +117,7 @@ app/
 
 ## 🧪 **Testing Guidelines**
 
-### **Test Categories**
-1. **Unit Tests**: ELO calculations, JWT tokens
-2. **Integration Tests**: Complete user workflows
-3. **Edge Cases**: Boundary conditions, error handling
-4. **Performance**: Large datasets, concurrent operations
-
-### **Key Test Commands**
-```bash
-# Basic functionality
-python test_basic.py
-
-# Full test suite
-python run_tests.py
-
-# With coverage
-python run_tests.py --coverage
+everything that should be known about testing is in TESTING_GUIDE.md
 ```
 
 ## 🚀 **Development Workflow**
