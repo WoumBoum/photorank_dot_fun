@@ -210,8 +210,12 @@ def create_guest_vote(
             created_at=datetime.utcnow()
         )
 
+        # Convert to dict and handle datetime serialization
+        payload_dict = payload.dict()
+        payload_dict['created_at'] = payload_dict['created_at'].isoformat()
+
         # Build JSONResponse and set cookie if newly created
-        resp = JSONResponse(content=payload.dict())
+        resp = JSONResponse(content=payload_dict)
         if not original_cookie or original_cookie != session_id:
             # 24h, Lax to allow same-site nav, secure recommended in prod
             resp.set_cookie(
