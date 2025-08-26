@@ -153,9 +153,19 @@ def get_remaining_guest_votes(session_id: str, db: Session) -> int:
             # Session expired - just return full limit, let caller handle cleanup
             return GUEST_VOTE_LIMIT
         
-        remaining = max(0, GUEST_VOTE_LIMIT - vote_limit.vote_count)
+        # Robust remaining calculation with diagnostics
+        vote_count = vote_limit.vote_count or 0
+        remaining = GUEST_VOTE_LIMIT - vote_count
+        if remaining < 0:
+            remaining = 0
+        if remaining > GUEST_VOTE_LIMIT:
+            remaining = GUEST_VOTE_LIMIT
         try:
-            print(f"[GUEST_STATS][COMPUTE] session_id={session_id} vote_count={vote_limit.vote_count} limit={GUEST_VOTE_LIMIT} remaining={remaining}")
+            print(f"[GUEST_STATS][COMPUTE] session_id={session_id} vote_count={vote_count} limit={GUEST_VOTE_LIMIT} remaining={remaining}")
+            if 0 < vote_count < GUEST_VOTE_LIMIT and remaining == 0:
+                fix = GUEST_VOTE_LIMIT - vote_count
+                print(f"[GUEST_STATS][FIXUP] corrected remaining from 0 to {fix} for vote_count={vote_count}")
+                remaining = fix
         except Exception:
             pass
         return remaining

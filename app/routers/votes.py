@@ -208,6 +208,12 @@ def create_guest_vote(
         
         # Commit all changes
         try:
+            # Diagnostic: show current vote_count before commit
+            try:
+                _vl = db.query(GuestVoteLimit).filter(GuestVoteLimit.session_id == session_id).first()
+                print(f"[GUEST_VOTE][COUNTER] session_id={session_id} new_vote_count={_vl.vote_count if _vl else 'None'}")
+            except Exception:
+                pass
             db.commit()
         except Exception as e:
             print(f"Failed to commit guest vote changes: {e}")
