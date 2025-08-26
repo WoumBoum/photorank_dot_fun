@@ -1,4 +1,5 @@
-from fastapi import APIRouter, Depends, HTTPException, Request, Response, JSONResponse
+from fastapi import APIRouter, Depends, HTTPException, Request
+from starlette.responses import Response, JSONResponse
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 from typing import Tuple
@@ -116,7 +117,7 @@ def create_guest_vote(
     db: Session = Depends(get_db)
 ):
     """Submit a vote as a guest user"""
-    from fastapi import Response
+    from starlette.responses import Response
 
     # Check if photos exist
     winner = db.query(Photo).filter(Photo.id == vote.winner_id).first()
